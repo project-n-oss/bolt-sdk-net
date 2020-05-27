@@ -1,8 +1,8 @@
-﻿using Amazon;
+﻿using System;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Auth;
 using Amazon.S3;
-using System.Configuration;
 
 namespace ProjectN.Bolt
 {
@@ -24,7 +24,7 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static readonly string BoltServiceUrl = ConfigurationManager.AppSettings.Get("BoltURL");
+        private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL");
 
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
