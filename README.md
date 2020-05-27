@@ -1,0 +1,15 @@
+# .NET SDK for Bolt
+
+This .NET solution provides a .NET Client Library for Bolt.
+
+It can be built using any of the standard .NET IDEs (including Microsoft Visual Studio and Jetbrains Rider) using the included project files.
+
+## Local linking for testing
+
+To link locally for testing:
+ - Build the package in a .NET IDE.
+ - Link locally like so:
+   ```bash
+   nuget add /path/to/ProjectN.Bolt/ProjectN.Bolt.1.0.0.nupkg -Source ./packages
+   dotnet add package ProjectN.Bolt -s ./packages
+   ```
