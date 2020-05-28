@@ -10,6 +10,6 @@ To link locally for testing:
  - Build the package in a .NET IDE.
  - Link locally like so:
    ```bash
-   nuget add /path/to/ProjectN.Bolt/ProjectN.Bolt.1.0.0.nupkg -Source ./packages
+   nuget add /path/to/ProjectN.Bolt/ProjectN.Bolt.x.y.z.nupkg -Source ./packages
    dotnet add package ProjectN.Bolt -s ./packages
    ```

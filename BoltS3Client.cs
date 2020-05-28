@@ -28,7 +28,8 @@ namespace ProjectN.Bolt
 
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
-            ServiceURL = BoltServiceUrl
+            ServiceURL = BoltServiceUrl,
+            ForcePathStyle = true,
         };
 
         /// <summary>
@@ -89,6 +90,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(AmazonS3Config config) : base(config)
         {
             config.ServiceURL = BoltServiceUrl;
+            config.ForcePathStyle = true;
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
@@ -113,6 +115,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
         {
             clientConfig.ServiceURL = BoltServiceUrl;
+            clientConfig.ForcePathStyle = true;
         }
 
         /// <summary>
@@ -147,6 +150,7 @@ namespace ProjectN.Bolt
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
             clientConfig.ServiceURL = BoltServiceUrl;
+            clientConfig.ForcePathStyle = true;
         }
 
         /// <summary>
