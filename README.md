@@ -14,3 +14,4 @@ To link locally for testing:
    nuget add /path/to/ProjectN.Bolt/ProjectN.Bolt.x.y.z.nupkg -Source ./packages
    dotnet add package ProjectN.Bolt -s ./packages
    ```
+Note: versions of `nuget` packages are immutable, you'll need to increment the version number when making a change in order to use the new version of a package.
