@@ -3,6 +3,7 @@ using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Auth;
 using Amazon.S3;
+using Amazon.Util;
 
 namespace ProjectN.Bolt
 {
@@ -24,8 +25,19 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL");
+        private static string Region()
+        {
+            if (EC2InstanceMetadata.Region is null)
+            {
+                return Environment.GetEnvironmentVariable("AWS_REGION");
+            }
+            else
+            {
+                return EC2InstanceMetadata.Region.SystemName;
+            };
+        }
 
+        private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL").Replace("{region}", Region());
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
             ServiceURL = BoltServiceUrl,
