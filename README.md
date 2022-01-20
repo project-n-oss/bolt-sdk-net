@@ -8,5 +8,5 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
 
 * Install the SDK package into your project using dotnet CLI:
    ```bash
-   dotnet add package ProjectN.Bolt --version 1.0.0
+   dotnet add package ProjectN.Bolt --version 1.0.1
    ```
