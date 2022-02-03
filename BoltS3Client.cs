@@ -11,53 +11,29 @@ namespace ProjectN.Bolt
     /// Implementation for accessing S3 via Bolt.
     ///
     /// Provides the same constructors as AmazonS3Client, but always resolves to the Bolt service URL
-    /// as specified in app settings.
+    /// as specified in environment variable.
     ///
-    /// Example App.config:
-    /// <code>
-    /// &lt;?xml version="1.0" encoding="utf-8" ?&gt;
-    /// &lt;configuration&gt;
-    ///     &lt;appSettings&gt;
-    ///         &lt;add key="BoltURL" value="http://bolt.project.n"/&gt;
-    ///     &lt;/appSettings&gt;
-    /// &lt;/configuration&gt;
-    /// </code>
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
         private static string Region()
         {
-            if (EC2InstanceMetadata.Region is null)
-            {
-                return Environment.GetEnvironmentVariable("AWS_REGION");
-            }
-            else
-            {
-                return EC2InstanceMetadata.Region.SystemName;
-            };
+            return EC2InstanceMetadata.Region?.SystemName
+                ?? Environment.GetEnvironmentVariable("AWS_REGION");
         }
 
-        private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL").Replace("{region}", Region());
-        private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
-        {
-            ServiceURL = BoltServiceUrl,
-            ForcePathStyle = true,
-        };
+        /// <summary>
+        /// Gets or sets the url of the bolt service endpoint. The value defaults
+        /// to the BOLT_URL environmental variable.
+        /// </summary>
+        public static string BoltServiceUrl { get; set; } 
+            = Environment.GetEnvironmentVariable("BOLT_URL")?.Replace("{region}", Region());
+
+        private static AmazonS3Config BoltConfig => CreateConfig(BoltServiceUrl);
 
         /// <summary>
         /// Constructs AmazonS3Client with the credentials loaded from the application's
         /// default configuration, and if unsuccessful from the Instance Profile service on an EC2 instance.
-        ///
-        /// Example App.config with credentials set.
-        /// <code>
-        /// &lt;?xml version="1.0" encoding="utf-8" ?&gt;
-        /// &lt;configuration&gt;
-        ///     &lt;appSettings&gt;
-        ///         &lt;add key="AWSProfileName" value="AWS Default"/&gt;
-        ///     &lt;/appSettings&gt;
-        /// &lt;/configuration&gt;
-        /// </code>
-        ///
         /// </summary>
         public BoltS3Client() : base(BoltConfig)
         {
@@ -66,17 +42,6 @@ namespace ProjectN.Bolt
         /// <summary>
         /// Constructs AmazonS3Client with the credentials loaded from the application's
         /// default configuration, and if unsuccessful from the Instance Profile service on an EC2 instance.
-        ///
-        /// Example App.config with credentials set.
-        /// <code>
-        /// &lt;?xml version="1.0" encoding="utf-8" ?&gt;
-        /// &lt;configuration&gt;
-        ///     &lt;appSettings&gt;
-        ///         &lt;add key="AWSProfileName" value="AWS Default"/&gt;
-        ///     &lt;/appSettings&gt;
-        /// &lt;/configuration&gt;
-        /// </code>
-        ///
         /// </summary>
         /// <param name="region">The region to connect.</param>
         public BoltS3Client(RegionEndpoint region) : base(BoltConfig)
@@ -86,23 +51,11 @@ namespace ProjectN.Bolt
         /// <summary>
         /// Constructs AmazonS3Client with the credentials loaded from the application's
         /// default configuration, and if unsuccessful from the Instance Profile service on an EC2 instance.
-        ///
-        /// Example App.config with credentials set.
-        /// <code>
-        /// &lt;?xml version="1.0" encoding="utf-8" ?&gt;
-        /// &lt;configuration&gt;
-        ///     &lt;appSettings&gt;
-        ///         &lt;add key="AWSProfileName" value="AWS Default"/&gt;
-        ///     &lt;/appSettings&gt;
-        /// &lt;/configuration&gt;
-        /// </code>
-        ///
         /// </summary>
         /// <param name="config">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AmazonS3Config config) : base(config)
         {
-            config.ServiceURL = BoltServiceUrl;
-            config.ForcePathStyle = true;
+            FixConfig(config);
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
@@ -126,8 +79,7 @@ namespace ProjectN.Bolt
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
         {
-            clientConfig.ServiceURL = BoltServiceUrl;
-            clientConfig.ForcePathStyle = true;
+            FixConfig(clientConfig);
         }
 
         /// <summary>
@@ -161,8 +113,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig) : base(
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
-            clientConfig.ServiceURL = BoltServiceUrl;
-            clientConfig.ForcePathStyle = true;
+            FixConfig(clientConfig);
         }
 
         /// <summary>
@@ -199,13 +150,26 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
             AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
-            clientConfig.ServiceURL = BoltServiceUrl;
+            FixConfig(clientConfig);
         }
 
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
         {
             return new BoltSigner();
+        }
+
+        private static AmazonS3Config CreateConfig(string endpoint) => new AmazonS3Config
+        {
+            ServiceURL = endpoint ?? throw new InvalidOperationException("BOLT_URL not defined in environment"),
+            ForcePathStyle = true,
+        };
+
+        private static void FixConfig(AmazonS3Config clientConfig, string boltUrl = null)
+        {
+            clientConfig.ServiceURL = boltUrl ?? BoltServiceUrl
+                ?? throw new InvalidOperationException("BOLT_URL not defined in environment");
+            clientConfig.ForcePathStyle = true;
         }
     }
 }
