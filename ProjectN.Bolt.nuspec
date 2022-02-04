@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
     <metadata>
-        <dependencies>
-            <group targetFramework=".NETFramework4.8" />
-        </dependencies>
         <id>$Id$</id>
         <version>$Version$</version>
         <authors>NData, Inc.</authors>
