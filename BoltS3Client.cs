@@ -27,7 +27,7 @@ namespace ProjectN.Bolt
   ///     &lt;appSettings&gt;
   ///         &lt;add key="BoltURL" value="http://bolt.project.n"/&gt;
   ///     &lt;/appSettings&gt;
-  /// &lt;/configuration&gt;
+  /// &lt;/configuration&
   /// </code>
   /// </summary>
   public class BoltS3Client : AmazonS3Client
@@ -52,19 +52,19 @@ namespace ProjectN.Bolt
       }
       else
       {
-        return EC2InstanceMetadata.AvailabilityZone.SystemName;
+        return EC2InstanceMetadata.AvailabilityZone;
       };
     }
 
     private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL").Replace("{region}", Region());
-    private static readonly string BoltDynamicServiceUrl = BoltS3Client.selectBoltEndPoint("GET"); // TODO: Pass method dynamically
+    private static readonly string BoltDynamicServiceUrl = SelectBoltEndPoint("GET"); // TODO: Pass method dynamically
 
-    private static getBoltEndPoints()
+    private static Dictionary<string, List<string>> GetBoltEndPoints()
     {
       try
       {
-        ServiceURL = BoltServiceUrl + "/services/bolt?az=" + AvailabilityZone();
-        var ServiceURLRequest = WebRequest.Create(ServiceURL);
+        var serviceURL = BoltServiceUrl + "/services/bolt?az=" + AvailabilityZone();
+        var ServiceURLRequest = WebRequest.Create(serviceURL);
         ServiceURLRequest.Method = "GET";
         var httpResponse = ServiceURLRequest.GetResponse();
         using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
@@ -79,9 +79,9 @@ namespace ProjectN.Bolt
       }
     }
 
-    private static selectBoltEndPoint(string method)
+    private static string SelectBoltEndPoint(string method)
     {
-      var boltEndPoints = getBoltEndPoints();
+      var boltEndPoints = GetBoltEndPoints();
       string[] readOrder = { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
       string[] writeOrder = { "main_write_endpoints", "failover_write_endpoints" };
       string[] preferredOrder = null;
@@ -101,7 +101,7 @@ namespace ProjectN.Bolt
         }
       }
       // if we reach this point, no endpoints are available
-      throw new Exception($"no endpoints are available... service_name: bolt, region_name: ${self._get_region()}");
+      throw new Exception($"no endpoints are available... service_name: bolt, region_name: ${Region()}");
     }
     private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
     {

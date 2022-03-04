@@ -73,6 +73,9 @@
         <Reference Include="System.Transactions" />
         <Reference Include="System.Xml" />
         <Reference Include="WindowsBase" />
+        <Reference Include="Newtonsoft.Json">
+          <HintPath>packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+        </Reference>
     </ItemGroup>
     <ItemGroup>
         <Compile Include="BoltS3Client.cs" />
