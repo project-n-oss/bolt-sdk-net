@@ -57,6 +57,7 @@ namespace ProjectN.Bolt
     }
 
     private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL").Replace("{region}", Region());
+    private static readonly string BoltDynamicServiceUrl = BoltS3Client.selectBoltEndPoint("GET"); // TODO: Pass method dynamically
 
     private static getBoltEndPoints()
     {
@@ -104,7 +105,7 @@ namespace ProjectN.Bolt
     }
     private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
     {
-      ServiceURL = BoltServiceUrl,
+      ServiceURL = BoltDynamicServiceUrl,
       ForcePathStyle = true,
     };
 
@@ -167,7 +168,7 @@ namespace ProjectN.Bolt
     /// <param name="config">The AmazonS3Client Configuration Object</param>
     public BoltS3Client(AmazonS3Config config) : base(config)
     {
-      config.ServiceURL = BoltServiceUrl;
+      config.ServiceURL = BoltDynamicServiceUrl;
       config.ForcePathStyle = true;
     }
 
@@ -192,7 +193,7 @@ namespace ProjectN.Bolt
     /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
     public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
     {
-      clientConfig.ServiceURL = BoltServiceUrl;
+      clientConfig.ServiceURL = BoltDynamicServiceUrl;
       clientConfig.ForcePathStyle = true;
     }
 
@@ -227,7 +228,7 @@ namespace ProjectN.Bolt
     public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig) : base(
         awsAccessKeyId, awsSecretAccessKey, clientConfig)
     {
-      clientConfig.ServiceURL = BoltServiceUrl;
+      clientConfig.ServiceURL = BoltDynamicServiceUrl;
       clientConfig.ForcePathStyle = true;
     }
 
@@ -265,8 +266,7 @@ namespace ProjectN.Bolt
     public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
         AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
     {
-      var boltEndPoint = BoltS3Client.selectBoltEndPoint("GET"); // TODO: Pass method dynamically
-      clientConfig.ServiceURL = boltEndPoint;
+      clientConfig.ServiceURL = BoltDynamicServiceUrl;
     }
 
     /// <summary>Creates the signer for the service.</summary>
