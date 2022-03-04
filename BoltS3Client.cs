@@ -265,7 +265,8 @@ namespace ProjectN.Bolt
     public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
         AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
     {
-      clientConfig.ServiceURL = BoltServiceUrl;
+      var boltEndPoint = BoltS3Client.selectBoltEndPoint("GET"); // TODO: Pass method dynamically
+      clientConfig.ServiceURL = boltEndPoint;
     }
 
     /// <summary>Creates the signer for the service.</summary>
