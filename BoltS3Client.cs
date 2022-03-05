@@ -54,9 +54,13 @@ namespace ProjectN.Bolt
             };
         }
 
-        private static readonly string BoltServiceUrl = Environment.GetEnvironmentVariable("BOLT_URL").Replace("{region}", Region()); // TODO: Check whether one time call or call every time
-        public static string BoltDynamicServiceUrl = BoltServiceUrl; // This will be updated from BoltSigner
-        public static string BoltApiUrl() => BoltDynamicServiceUrl;
+        private static string BoltURL = Environment.GetEnvironmentVariable("BOLT_URL")?.Replace("{region}", Region());
+
+        private static string ServiceURL = Environment.GetEnvironmentVariable("SERVICE_URL")?.Replace("{region}", Region());
+
+        public static bool isItBasedOnDynamicBoltEndPoints = (ServiceURL ?? "").Length > 0 ? true : false;
+
+        public static string BoltApiUrl = isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // This ServiceURL will be replaced with dynamic Bolt API Endpoint based on the S3 operation request, Check the related code in BoltSigner.cs
 
         private static Dictionary<string, List<string>> GetBoltEndPoints(string boltServiceListURL)
         {
@@ -72,7 +76,7 @@ namespace ProjectN.Bolt
 
         public static string SelectBoltEndPoint(string method)
         {
-            var boltEndPoints = GetBoltEndPoints(BoltServiceUrl + "/services/bolt?az=" + AvailabilityZone());
+            var boltEndPoints = GetBoltEndPoints(ServiceURL + "/services/bolt?az=" + AvailabilityZone());
             string[] readOrder = { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
             string[] writeOrder = { "main_write_endpoints", "failover_write_endpoints" };
             string[] methodSetTypes = { "GET", "HEAD" };
@@ -92,7 +96,7 @@ namespace ProjectN.Bolt
         }
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
-            ServiceURL = BoltApiUrl(),
+            ServiceURL = BoltApiUrl,
             ForcePathStyle = true,
         };
 
@@ -156,7 +160,7 @@ namespace ProjectN.Bolt
         /// <param name="config">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AmazonS3Config config) : base(config)
         {
-            config.ServiceURL = BoltApiUrl();
+            config.ServiceURL = BoltApiUrl;
             config.ForcePathStyle = true;
         }
 
@@ -181,7 +185,7 @@ namespace ProjectN.Bolt
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
         {
-            clientConfig.ServiceURL = BoltApiUrl();
+            clientConfig.ServiceURL = BoltApiUrl;
             clientConfig.ForcePathStyle = true;
         }
 
@@ -216,7 +220,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig) : base(
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
-            clientConfig.ServiceURL = BoltApiUrl();
+            clientConfig.ServiceURL = BoltApiUrl;
             clientConfig.ForcePathStyle = true;
         }
 
@@ -254,7 +258,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
             AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
-            clientConfig.ServiceURL = BoltApiUrl();
+            clientConfig.ServiceURL = BoltApiUrl;
         }
 
 
