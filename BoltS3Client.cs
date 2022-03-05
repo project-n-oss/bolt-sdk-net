@@ -60,7 +60,7 @@ namespace ProjectN.Bolt
 
         public static bool isItBasedOnDynamicBoltEndPoints = (ServiceURL ?? "").Length > 0 ? true : false;
 
-        public static string BoltApiUrl = isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // This ServiceURL will be replaced with dynamic Bolt API Endpoint based on the S3 operation request, Check the related code in BoltSigner.cs
+        public static string BoltApiUrl = isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // This ServiceURL will be replaced with dynamic Bolt API Endpoint based on S3 operation request, Check the related code in BoltSigner.cs
 
         private static Dictionary<string, List<string>> GetBoltEndPoints(string boltServiceListURL)
         {
@@ -74,9 +74,15 @@ namespace ProjectN.Bolt
             }
         }
 
+        private static DateTime lastRefreshedTime = DateTime.Now;
+        private static Dictionary<string, List<string>> BoltEndPoints = null; // TODO: Move static class level to instance level so as to make thread safe
         public static string SelectBoltEndPoint(string method)
         {
-            var boltEndPoints = GetBoltEndPoints(ServiceURL + "/services/bolt?az=" + AvailabilityZone());
+            if ((DateTime.Now - lastRefreshedTime).Seconds > 120 || BoltEndPoints is null)
+            {
+                BoltEndPoints = GetBoltEndPoints(ServiceURL + "/services/bolt?az=" + AvailabilityZone());
+                lastRefreshedTime = DateTime.Now;
+            }
             string[] readOrder = { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
             string[] writeOrder = { "main_write_endpoints", "failover_write_endpoints" };
             string[] methodSetTypes = { "GET", "HEAD" };
@@ -84,11 +90,11 @@ namespace ProjectN.Bolt
             string[] preferredOrder = methodSet.Contains(method) ? readOrder : writeOrder;
             foreach (var endPoint in preferredOrder)
             {
-                if (boltEndPoints[endPoint].Count > 0)
+                if (BoltEndPoints[endPoint].Count > 0)
                 {
                     var random = new Random();
-                    var randomIndex = random.Next(boltEndPoints[endPoint].Count);
-                    return boltEndPoints[endPoint][randomIndex];
+                    var randomIndex = random.Next(BoltEndPoints[endPoint].Count);
+                    return BoltEndPoints[endPoint][randomIndex];
                 }
             }
             // if we reach this point, no endpoints are available
