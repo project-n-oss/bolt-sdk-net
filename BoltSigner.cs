@@ -55,7 +55,7 @@ namespace ProjectN.Bolt
             if (BoltS3Client.isItBasedOnDynamicBoltEndPoints)
             {
                 var endpoint = BoltS3Client.SelectBoltEndPoint(request.HttpMethod);
-                request.Endpoint = endpoint.StartsWith("http") ? new Uri(endpoint) : new Uri($"http://{endpoint}");
+                request.Endpoint = endpoint.StartsWith("http") ? new Uri(endpoint) : new Uri($"http://{endpoint}:9000");
             }
 
             // Create the canonical STS request to get caller identity, with session token if appropriate.
