@@ -77,7 +77,7 @@ namespace ProjectN.Bolt
             {
                 if(ServiceURL is null && BoltURL is null)
                 {
-                    throw new InvalidOperationException("Either BOLT_URL or SERVICE_URL not defined in evironment, please set the right one which is based on your bolt type whether static endpint or dynamic endpoints");
+                    throw new InvalidOperationException("Either BOLT_URL or SERVICE_URL must be defined in evironment, please set the right one based on your bolt type.");
                 }
                 return isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // In case of dynamic bolt endpoints, the ServiceURL will be replaced with dynamic Bolt API Endpoint based on S3 operation request, Check the related code in BoltSigner.cs
             }
