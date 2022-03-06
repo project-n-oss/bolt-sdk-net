@@ -33,26 +33,34 @@ namespace ProjectN.Bolt
     {
         private static string Region()
         {
-            if (EC2InstanceMetadata.Region is null)
+            var region = Environment.GetEnvironmentVariable("AWS_REGION");
+            if(region is null)
             {
-                return Environment.GetEnvironmentVariable("AWS_REGION");
+                region = EC2InstanceMetadata.Region.SystemName;
             }
-            else
+
+            if (region is null)
             {
-                return EC2InstanceMetadata.Region.SystemName;
-            };
+                throw new Exception("Region info not available in EC2InstanceMetadata, please set environment variable AWS_REGION.");
+            }
+
+            return region;
         }
 
         private static string AvailabilityZone()
         {
-            if (EC2InstanceMetadata.AvailabilityZone is null)
+            var zoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID");
+            if (zoneId is null)
             {
-                return Environment.GetEnvironmentVariable("AWS_ZONE_ID");
+                zoneId = EC2InstanceMetadata.AvailabilityZone;
             }
-            else
+
+            if (zoneId is null)
             {
-                return EC2InstanceMetadata.AvailabilityZone;
-            };
+                throw new Exception("ZoneId info not available in EC2InstanceMetadata, please set environment variable AWS_ZONE_ID.");
+            }
+
+            return zoneId;
         }
 
         private static string BoltURL = Environment.GetEnvironmentVariable("BOLT_URL")?.Replace("{region}", Region());
