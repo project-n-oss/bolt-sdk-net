@@ -9,6 +9,7 @@ using System.IO;
 using System.Net;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectN.Bolt
 {
@@ -62,14 +63,26 @@ namespace ProjectN.Bolt
 
         public static string BoltApiUrl = isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // This ServiceURL will be replaced with dynamic Bolt API Endpoint based on S3 operation request, Check the related code in BoltSigner.cs
 
+        private static bool AcceptAllCertifications(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certification, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors sslPolicyErrors)
+        {
+            return true;
+        }
         private static Dictionary<string, List<string>> GetBoltEndPoints(string boltServiceListURL)
         {
+            Console.WriteLine($"boltServiceListURL: {boltServiceListURL}");
+            //ServicePointManager.Expect100Continue = true;
+            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(AcceptAllCertifications);
             var ServiceURLRequest = WebRequest.Create(boltServiceListURL);
+            Console.WriteLine($"After WebRequest.Create");
             ServiceURLRequest.Method = "GET";
+            Console.WriteLine($"Before ServiceURLRequest.GetResponse");
             var httpResponse = ServiceURLRequest.GetResponse();
+            Console.WriteLine($"After ServiceURLRequest.GetResponse");
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
                 var responseString = streamReader.ReadToEnd();
+                Console.WriteLine($"responseString : {responseString}");
                 return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
             }
         }
@@ -88,13 +101,14 @@ namespace ProjectN.Bolt
             string[] methodSetTypes = { "GET", "HEAD" };
             var methodSet = new HashSet<string>(methodSetTypes);
             string[] preferredOrder = methodSet.Contains(method) ? readOrder : writeOrder;
-            foreach (var endPoint in preferredOrder)
+            foreach (var endPointsKey in preferredOrder)
             {
-                if (BoltEndPoints[endPoint].Count > 0)
+                if (BoltEndPoints.ContainsKey(endPointsKey) && BoltEndPoints[endPointsKey].Count > 0)
                 {
+                    var methodRelatedEndPoints = BoltEndPoints[endPointsKey].Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
                     var random = new Random();
-                    var randomIndex = random.Next(BoltEndPoints[endPoint].Count);
-                    return BoltEndPoints[endPoint][randomIndex];
+                    var randomIndex = random.Next(methodRelatedEndPoints.Count);
+                    return methodRelatedEndPoints[randomIndex];
                 }
             }
             // if we reach this point, no endpoints are available

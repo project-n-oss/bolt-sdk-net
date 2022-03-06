@@ -52,11 +52,16 @@ namespace ProjectN.Bolt
         public override void Sign(IRequest request, IClientConfig clientConfig, RequestMetrics metrics,
             string awsAccessKeyId, string awsSecretAccessKey)
         {
+            Console.WriteLine($"Before....");
             if (BoltS3Client.isItBasedOnDynamicBoltEndPoints)
             {
+                Console.WriteLine($"inside isItBasedOnDynamicBoltEndPoints");
                 var endpoint = BoltS3Client.SelectBoltEndPoint(request.HttpMethod);
+                Console.WriteLine($"endpoint: {endpoint}");
                 request.Endpoint = endpoint.StartsWith("http") ? new Uri(endpoint) : new Uri($"http://{endpoint}:9000");
             }
+
+            Console.WriteLine($"request.Endpoint : {request.Endpoint}");
 
             // Create the canonical STS request to get caller identity, with session token if appropriate.
             var iamRequest = GetCallerIdentityRequestMarshaller.Instance.Marshall(new GetCallerIdentityRequest());
