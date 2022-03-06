@@ -10,6 +10,8 @@ using System.Net;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ProjectN.Bolt
 {
@@ -34,9 +36,9 @@ namespace ProjectN.Bolt
         private static string Region()
         {
             var region = Environment.GetEnvironmentVariable("AWS_REGION");
-            if(region is null)
+            if (region is null)
             {
-                region = EC2InstanceMetadata.Region.SystemName;
+                region = EC2InstanceMetadata.Region?.SystemName;
             }
 
             if (region is null)
@@ -69,9 +71,19 @@ namespace ProjectN.Bolt
 
         public static bool isItBasedOnDynamicBoltEndPoints = (ServiceURL ?? "").Length > 0 ? true : false;
 
-        public static string BoltApiUrl = isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // This ServiceURL will be replaced with dynamic Bolt API Endpoint based on S3 operation request, Check the related code in BoltSigner.cs
+        public static string BoltApiUrl
+        {
+            get
+            {
+                if(ServiceURL is null && BoltURL is null)
+                {
+                    throw new InvalidOperationException("Either BOLT_URL or SERVICE_URL not defined in evironment, please set the right one which is based on your bolt type whether static endpint or dynamic endpoints");
+                }
+                return isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // In case of dynamic bolt endpoints, the ServiceURL will be replaced with dynamic Bolt API Endpoint based on S3 operation request, Check the related code in BoltSigner.cs
+            }
+        }
 
-        private static bool AcceptAllCertifications(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certification, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors sslPolicyErrors)
+        private static bool AcceptAllCertifications(object sender, X509Certificate certification, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             return true;
         }
@@ -80,7 +92,7 @@ namespace ProjectN.Bolt
             Console.WriteLine($"boltServiceListURL: {boltServiceListURL}");
             //ServicePointManager.Expect100Continue = true;
             //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback = new System.Net.Security.RemoteCertificateValidationCallback(AcceptAllCertifications);
+            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(AcceptAllCertifications);
             var ServiceURLRequest = WebRequest.Create(boltServiceListURL);
             Console.WriteLine($"After WebRequest.Create");
             ServiceURLRequest.Method = "GET";

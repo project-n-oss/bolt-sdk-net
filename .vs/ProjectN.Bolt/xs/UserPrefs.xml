@@ -1,9 +1,8 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workbench ActiveDocument="BoltSigner.cs">
     <Files>
-      <File FileName="BoltS3Client.cs" Line="95" Column="14" />
-      <File FileName="packages.config" Line="5" Column="16" />
-      <File FileName="BoltSigner.cs" Line="56" Column="102" />
+      <File FileName="BoltS3Client.cs" Line="50" Column="49" />
+      <File FileName="BoltSigner.cs" Line="59" Column="84" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
