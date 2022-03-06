@@ -93,7 +93,9 @@ namespace ProjectN.Bolt
         {
             if ((DateTime.Now - lastRefreshedTime).Seconds > 120 || BoltEndPoints is null)
             {
+                Console.WriteLine($"Calling GetBoltEndPoints... lastRefreshedTime: {lastRefreshedTime.ToString()}, Now: {DateTime.Now.ToString()}");
                 BoltEndPoints = GetBoltEndPoints(ServiceURL + "/services/bolt?az=" + AvailabilityZone());
+                Console.WriteLine($"Updated endpoints: {DateTime.Now.ToString()}");
                 lastRefreshedTime = DateTime.Now;
             }
             string[] readOrder = { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
