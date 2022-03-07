@@ -1,12 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>ProjectN.Bolt</PackageId>
     <PackageVersion>1.0.3</PackageVersion>
     <Authors>ProjectN</Authors>
     <Description>Bolt .NET SDK</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/project-n-oss/bolt-sdk-net</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
