@@ -52,13 +52,7 @@ namespace ProjectN.Bolt
         public override void Sign(IRequest request, IClientConfig clientConfig, RequestMetrics metrics,
             string awsAccessKeyId, string awsSecretAccessKey)
         {
-            if (BoltS3Client.isItBasedOnDynamicBoltEndPoints)
-            {
-                Console.WriteLine($"inside isItBasedOnDynamicBoltEndPoints");
-                var endpoint = BoltS3Client.SelectBoltEndPoint(request.HttpMethod);
-                Console.WriteLine($"endpoint: {endpoint}");
-                request.Endpoint = endpoint.StartsWith("http") ? new Uri(endpoint) : new Uri($"http://{endpoint}:9000");
-            }
+            request.Endpoint = new Uri($"http://{BoltS3Client.SelectBoltEndPoint(request.HttpMethod)}:9000"); // TODO: This should be updated when pushing SSL support changes
             Console.WriteLine($"request.Endpoint : {request.Endpoint}");
 
             // Create the canonical STS request to get caller identity, with session token if appropriate.

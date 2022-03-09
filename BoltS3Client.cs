@@ -13,6 +13,8 @@ using System.Linq;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
+using System.Configuration;
+
 namespace ProjectN.Bolt
 {
     /// <summary>
@@ -33,72 +35,42 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static string Region()
-        {
-            var region = Environment.GetEnvironmentVariable("AWS_REGION");
-            if (region is null)
-            {
-                region = EC2InstanceMetadata.Region?.SystemName;
-            }
-
-            if (region is null)
-            {
-                throw new Exception("Region info not available in EC2InstanceMetadata, please set environment variable AWS_REGION.");
-            }
-
-            return region;
-        }
-
-        private static string AvailabilityZone()
-        {
-            var zoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID");
-            if (zoneId is null)
-            {
-                zoneId = EC2InstanceMetadata.AvailabilityZone;
-            }
-
-            if (zoneId is null)
-            {
-                throw new Exception("ZoneId info not available in EC2InstanceMetadata, please set environment variable AWS_ZONE_ID.");
-            }
-
-            return zoneId;
-        }
-
-        private static string BoltURL = Environment.GetEnvironmentVariable("BOLT_URL")?.Replace("{region}", Region());
-
-        private static string ServiceURL = Environment.GetEnvironmentVariable("SERVICE_URL")?.Replace("{region}", Region());
-
-        public static bool isItBasedOnDynamicBoltEndPoints = (ServiceURL ?? "").Length > 0 ? true : false;
-
-        public static string BoltApiUrl
+        private static string Region
         {
             get
             {
-                if(ServiceURL is null && BoltURL is null)
-                {
-                    throw new InvalidOperationException("Either BOLT_URL or SERVICE_URL must be defined in evironment, please set the right one based on your bolt type.");
-                }
-                return isItBasedOnDynamicBoltEndPoints ? ServiceURL : BoltURL; // In case of dynamic bolt endpoints, the ServiceURL will be replaced with dynamic Bolt API Endpoint based on S3 operation request, Check the related code in BoltSigner.cs
+                return Environment.GetEnvironmentVariable("AWS_REGION")
+                    ?? EC2InstanceMetadata.Region?.SystemName
+                    ?? throw new InvalidOperationException("Region not available in EC2InstanceMetadata, and also not defined in environment.");
             }
         }
 
-        private static bool AcceptAllCertifications(object sender, X509Certificate certification, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        private static string AvailabilityZoneId
         {
-            return true;
+            get
+            {
+                return Environment.GetEnvironmentVariable("AWS_ZONE_ID")
+                    ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
+                    ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
+            }
         }
-        private static Dictionary<string, List<string>> GetBoltEndPoints(string boltServiceListURL)
+
+        private static string UrlToFetchLatestBoltEndPoints
         {
-            Console.WriteLine($"boltServiceListURL: {boltServiceListURL}");
-            //ServicePointManager.Expect100Continue = true;
-            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback = new RemoteCertificateValidationCallback(AcceptAllCertifications);
-            var ServiceURLRequest = WebRequest.Create(boltServiceListURL);
-            Console.WriteLine($"After WebRequest.Create");
-            ServiceURLRequest.Method = "GET";
-            Console.WriteLine($"Before ServiceURLRequest.GetResponse");
+            get
+            {
+                var baseServiceUrl = (ConfigurationManager.AppSettings["SERVICE_URL"] ?? Environment.GetEnvironmentVariable("SERVICE_URL"))
+                    ?.Replace("{region}", Region)
+                    ?? throw new InvalidOperationException("SERVICE_URL not defined in app config or evironment.");
+
+                return $"{baseServiceUrl}/services/bolt?az={AvailabilityZoneId}";
+            }
+        }
+
+        private static Dictionary<string, List<string>> GetBoltEndPoints()
+        {
+            var ServiceURLRequest = WebRequest.Create(UrlToFetchLatestBoltEndPoints);
             var httpResponse = ServiceURLRequest.GetResponse();
-            Console.WriteLine($"After ServiceURLRequest.GetResponse");
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
                 var responseString = streamReader.ReadToEnd();
@@ -107,38 +79,39 @@ namespace ProjectN.Bolt
             }
         }
 
-        private static DateTime lastRefreshedTime = DateTime.Now;
+        private static DateTime LastRefreshedTimeinUtc = DateTime.UtcNow;
+        private static List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
+        private static List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
+        private static List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" };
         private static Dictionary<string, List<string>> BoltEndPoints = null; // TODO: Move static class level to instance level so as to make thread safe
-        public static string SelectBoltEndPoint(string method)
+
+        public static string SelectBoltEndPoint(string httpRequestMethod)
         {
-            if ((DateTime.Now - lastRefreshedTime).Seconds > 120 || BoltEndPoints is null)
+            if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > 120 || BoltEndPoints is null)
             {
-                Console.WriteLine($"Calling GetBoltEndPoints... lastRefreshedTime: {lastRefreshedTime.ToString()}, Now: {DateTime.Now.ToString()}");
-                BoltEndPoints = GetBoltEndPoints(ServiceURL + "/services/bolt?az=" + AvailabilityZone());
-                Console.WriteLine($"Updated endpoints: {DateTime.Now.ToString()}");
-                lastRefreshedTime = DateTime.Now;
+                Console.WriteLine($"Fetching latest bolt endpoints. UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}, LastRefreshedTime: {LastRefreshedTimeinUtc}, UtcNow: {DateTime.UtcNow}");
+                BoltEndPoints = GetBoltEndPoints();
+                LastRefreshedTimeinUtc = DateTime.UtcNow;
             }
-            string[] readOrder = { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
-            string[] writeOrder = { "main_write_endpoints", "failover_write_endpoints" };
-            string[] methodSetTypes = { "GET", "HEAD" };
-            var methodSet = new HashSet<string>(methodSetTypes);
-            string[] preferredOrder = methodSet.Contains(method) ? readOrder : writeOrder;
+
+            var preferredOrder = HttpReadMethodTypes.Contains(httpRequestMethod) ? ReadOrderEndpoints : WriteOrderEndpoints;
+            var random = new Random();
             foreach (var endPointsKey in preferredOrder)
             {
                 if (BoltEndPoints.ContainsKey(endPointsKey) && BoltEndPoints[endPointsKey].Count > 0)
                 {
                     var methodRelatedEndPoints = BoltEndPoints[endPointsKey].Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
-                    var random = new Random();
                     var randomIndex = random.Next(methodRelatedEndPoints.Count);
                     return methodRelatedEndPoints[randomIndex];
                 }
             }
-            // if we reach this point, no endpoints are available
-            throw new Exception($"no endpoints are available... service_name: bolt, region_name: {Region()}");
+
+            throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}");
         }
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
-            ServiceURL = BoltApiUrl,
+            // The UrlToFetchLatestBoltEndPoints will be replaced with dynamic bolt api endpoint based on the http method type of S3 operation's request. You can check the related code in BoltSigner.cs
+            ServiceURL = UrlToFetchLatestBoltEndPoints,
             ForcePathStyle = true,
         };
 
@@ -202,7 +175,7 @@ namespace ProjectN.Bolt
         /// <param name="config">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AmazonS3Config config) : base(config)
         {
-            config.ServiceURL = BoltApiUrl;
+            config.ServiceURL = UrlToFetchLatestBoltEndPoints;
             config.ForcePathStyle = true;
         }
 
@@ -227,7 +200,7 @@ namespace ProjectN.Bolt
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
         {
-            clientConfig.ServiceURL = BoltApiUrl;
+            clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
             clientConfig.ForcePathStyle = true;
         }
 
@@ -262,7 +235,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig) : base(
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
-            clientConfig.ServiceURL = BoltApiUrl;
+            clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
             clientConfig.ForcePathStyle = true;
         }
 
@@ -300,7 +273,7 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
             AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
-            clientConfig.ServiceURL = BoltApiUrl;
+            clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
         }
 
 
