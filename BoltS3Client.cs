@@ -1,19 +1,18 @@
 ﻿using System;
+using System.IO;
+using System.Net;
+using System.Configuration;
+
+using System.Linq;
+using System.Collections.Generic;
+
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Auth;
 using Amazon.S3;
 using Amazon.Util;
 
-using System.IO;
-using System.Net;
 using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-
-using System.Configuration;
 
 namespace ProjectN.Bolt
 {
@@ -52,6 +51,16 @@ namespace ProjectN.Bolt
                 return Environment.GetEnvironmentVariable("AWS_ZONE_ID")
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
                     ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
+            }
+        }
+
+        public static string BoltHostname
+        {
+            get
+            {
+                return  (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
+                    ?.Replace("{region}", Region)
+                    ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
             }
         }
 
@@ -108,6 +117,7 @@ namespace ProjectN.Bolt
 
             throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}");
         }
+
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
             // The UrlToFetchLatestBoltEndPoints will be replaced with dynamic bolt api endpoint based on the http method type of S3 operation's request. You can check the related code in BoltSigner.cs
@@ -273,9 +283,9 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
             AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
+            clientConfig.ForcePathStyle = true;
             clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
         }
-
 
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
