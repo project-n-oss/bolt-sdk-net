@@ -1,21 +1,18 @@
 ﻿using System;
+using System.IO;
+using System.Net;
+using System.Configuration;
+
+using System.Linq;
+using System.Collections.Generic;
+
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal.Auth;
-using Amazon.Runtime.Internal.Util;
 using Amazon.S3;
 using Amazon.Util;
 
-using System.IO;
-using System.Net;
-using System.Net.Http;
 using Newtonsoft.Json;
-using System.Collections.Generic;
-using System.Linq;
-
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-using System.Configuration;
 
 namespace ProjectN.Bolt
 {
