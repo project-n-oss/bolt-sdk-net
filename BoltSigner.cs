@@ -53,7 +53,6 @@ namespace ProjectN.Bolt
             string awsAccessKeyId, string awsSecretAccessKey)
         {
             request.Endpoint = new Uri($"https://{BoltS3Client.SelectBoltEndPoint(request.HttpMethod)}");
-            Console.WriteLine($"request.Endpoint : {request.Endpoint}");
 
             // Create the canonical STS request to get caller identity, with session token if appropriate.
             var iamRequest = GetCallerIdentityRequestMarshaller.Instance.Marshall(new GetCallerIdentityRequest());
