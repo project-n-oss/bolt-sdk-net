@@ -98,7 +98,6 @@ namespace ProjectN.Bolt
 
         public static string SelectBoltEndPoint(string httpRequestMethod)
         {
-            Console.WriteLine($"RefreshTime: {RefreshTime}");
             if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > RefreshTime || BoltEndPoints is null)
             {
                 BoltEndPoints = GetBoltEndPoints();
