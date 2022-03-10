@@ -125,12 +125,6 @@ namespace ProjectN.Bolt
             ForcePathStyle = true,
         };
 
-        //protected override void CustomizeRuntimePipeline(RuntimePipeline pipeline)
-        //{
-        //    base.CustomizeRuntimePipeline(pipeline);
-        //    pipeline.AddHandler(new MyCustomHandler());
-        //}
-
         /// <summary>
         /// Constructs AmazonS3Client with the credentials loaded from the application's
         /// default configuration, and if unsuccessful from the Instance Profile service on an EC2 instance.
