@@ -57,6 +57,16 @@ namespace ProjectN.Bolt
             }
         }
 
+        public static string BoltHostname
+        {
+            get
+            {
+                return  (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
+                    ?.Replace("{region}", Region)
+                    ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
+            }
+        }
+
         private static string UrlToFetchLatestBoltEndPoints
         {
             get
@@ -66,16 +76,6 @@ namespace ProjectN.Bolt
                     ?? throw new InvalidOperationException("SERVICE_URL not defined in app config or evironment.");
 
                 return $"{baseServiceUrl}/services/bolt?az={AvailabilityZoneId}";
-            }
-        }
-
-        public static string BoltHostname
-        {
-            get
-            {
-                return  (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
-                    ?.Replace("{region}", Region)
-                    ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
             }
         }
 
@@ -120,13 +120,12 @@ namespace ProjectN.Bolt
 
             throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}");
         }
-        private static HttpClientFactory BoltHttpClientFactory = new BoltHttpsClientFactory(BoltHostname);
+
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
             // The UrlToFetchLatestBoltEndPoints will be replaced with dynamic bolt api endpoint based on the http method type of S3 operation's request. You can check the related code in BoltSigner.cs
             ServiceURL = UrlToFetchLatestBoltEndPoints,
             ForcePathStyle = true,
-            HttpClientFactory = BoltHttpClientFactory,
         };
 
         //protected override void CustomizeRuntimePipeline(RuntimePipeline pipeline)
@@ -197,7 +196,6 @@ namespace ProjectN.Bolt
         {
             config.ServiceURL = UrlToFetchLatestBoltEndPoints;
             config.ForcePathStyle = true;
-            config.HttpClientFactory = BoltHttpClientFactory;
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
@@ -223,7 +221,6 @@ namespace ProjectN.Bolt
         {
             clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
             clientConfig.ForcePathStyle = true;
-            clientConfig.HttpClientFactory = BoltHttpClientFactory;
         }
 
         /// <summary>
@@ -259,7 +256,6 @@ namespace ProjectN.Bolt
         {
             clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
             clientConfig.ForcePathStyle = true;
-            clientConfig.HttpClientFactory = BoltHttpClientFactory;
         }
 
         /// <summary>
@@ -298,99 +294,12 @@ namespace ProjectN.Bolt
         {
             clientConfig.ForcePathStyle = true;
             clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
-            clientConfig.HttpClientFactory = BoltHttpClientFactory;
         }
-
 
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
         {
             return new BoltSigner();
-        }
-    }
-
-
-    public class BoltHttpsClientFactory : HttpClientFactory 
-    {
-        // TODO: not sure if everythong should be static
-        private static string _boltHostname;
-        
-        public BoltHttpsClientFactory(string boltHostname)
-        {
-            _boltHostname = boltHostname;
-        }
-
-        private static bool ServerCertificateCustomValidation(HttpRequestMessage requestMessage, X509Certificate2 certificate, X509Chain chain, SslPolicyErrors sslErrors)
-        {
-            switch (sslErrors)
-            {
-                case SslPolicyErrors.None:
-                    return true;
-                case SslPolicyErrors.RemoteCertificateNameMismatch:
-                    // TODO: not sure if correct
-                    return _boltHostname == certificate.SubjectName.Name;
-                default:
-                    return false;
-            }
-        }
-
-        override public HttpClient CreateHttpClient(IClientConfig clientConfig) 
-        {
-            var httpMessageHandler = new HttpClientHandler();
-
-            // This is the only line that's different from Amazon.Runtime.CreateManagedHttpClient
-            // TODO: should maybe be in a try/catch block
-            httpMessageHandler.ServerCertificateCustomValidationCallback = ServerCertificateCustomValidation;
-
-
-            if (clientConfig.MaxConnectionsPerServer.HasValue)
-                httpMessageHandler.MaxConnectionsPerServer = clientConfig.MaxConnectionsPerServer.Value;
-
-            try
-            {
-                // If HttpClientHandler.AllowAutoRedirect is set to true (default value),
-                // redirects for GET requests are automatically followed and redirects for POST
-                // requests are thrown back as exceptions.
-                // If HttpClientHandler.AllowAutoRedirect is set to false (e.g. S3),
-                // redirects are returned as responses.
-                httpMessageHandler.AllowAutoRedirect = clientConfig.AllowAutoRedirect;
-
-                // Disable automatic decompression when Content-Encoding header is present
-                httpMessageHandler.AutomaticDecompression = DecompressionMethods.None;
-            }
-            catch (PlatformNotSupportedException pns)
-            {
-                Logger.GetLogger(typeof(HttpRequestMessageFactory)).Debug(pns, $"The current runtime does not support modifying the configuration of HttpClient.");
-            }
-
-            try
-            { 
-                var proxy = clientConfig.GetWebProxy();
-                if (proxy != null)
-                {
-                    httpMessageHandler.Proxy = proxy;
-                }
-
-                if (httpMessageHandler.Proxy != null && clientConfig.ProxyCredentials != null)
-                {
-                    httpMessageHandler.Proxy.Credentials = clientConfig.ProxyCredentials;
-                }
-            }
-            catch (PlatformNotSupportedException pns)
-            {
-                Logger.GetLogger(typeof(HttpRequestMessageFactory)).Debug(pns, $"The current runtime does not support modifying proxy settings of HttpClient.");
-            }
-
-            var httpClient = new HttpClient(httpMessageHandler);
-            
-            if (clientConfig.Timeout.HasValue)
-            {
-                // Timeout value is set to ClientConfig.MaxTimeout for S3 and Glacier.
-                // Use default value (100 seconds) for other services.
-                httpClient.Timeout = clientConfig.Timeout.Value;
-            }
-
-            return httpClient;
         }
     }
 }

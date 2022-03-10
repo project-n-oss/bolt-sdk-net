@@ -52,7 +52,7 @@ namespace ProjectN.Bolt
         public override void Sign(IRequest request, IClientConfig clientConfig, RequestMetrics metrics,
             string awsAccessKeyId, string awsSecretAccessKey)
         {
-            request.Endpoint = new Uri($"https://{BoltS3Client.SelectBoltEndPoint(request.HttpMethod)}"); // TODO: This should be updated when pushing SSL support changes
+            request.Endpoint = new Uri($"https://{BoltS3Client.SelectBoltEndPoint(request.HttpMethod)}");
             Console.WriteLine($"request.Endpoint : {request.Endpoint}");
 
             // Create the canonical STS request to get caller identity, with session token if appropriate.
@@ -72,7 +72,8 @@ namespace ProjectN.Bolt
             request.Headers["X-Amz-Date"] = iamRequest.Headers["X-Amz-Date"];
             request.Headers["Authorization"] = awS4SigningResult.ForAuthorizationHeader;
 
-            // use bolt hostname as the Host in the request
+            // Use bolt hostname as the Host in the request
+            // SSL certs are validated based on the Host
             request.Headers["Host"] = BoltS3Client.BoltHostname;
         }
     }
