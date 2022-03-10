@@ -58,7 +58,7 @@ namespace ProjectN.Bolt
         {
             get
             {
-                return  (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
+                return (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
                     ?.Replace("{region}", Region)
                     ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
             }
@@ -83,22 +83,23 @@ namespace ProjectN.Bolt
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
                 var responseString = streamReader.ReadToEnd();
-                Console.WriteLine($"responseString : {responseString}");
                 return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
             }
         }
 
-        private static DateTime LastRefreshedTimeinUtc = DateTime.UtcNow;
         private static List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
         private static List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
         private static List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" };
+
+        private static DateTime LastRefreshedTimeinUtc = DateTime.UtcNow;
         private static Dictionary<string, List<string>> BoltEndPoints = null; // TODO: Move static class level to instance level so as to make thread safe
+
+        private static int RefreshTime = new Random().Next(60, 180);
 
         public static string SelectBoltEndPoint(string httpRequestMethod)
         {
-            if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > 120 || BoltEndPoints is null)
+            if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > RefreshTime || BoltEndPoints is null)
             {
-                Console.WriteLine($"Fetching latest bolt endpoints. UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}, LastRefreshedTime: {LastRefreshedTimeinUtc}, UtcNow: {DateTime.UtcNow}");
                 BoltEndPoints = GetBoltEndPoints();
                 LastRefreshedTimeinUtc = DateTime.UtcNow;
             }
@@ -116,6 +117,8 @@ namespace ProjectN.Bolt
             }
 
             throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}");
+
+
         }
 
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
