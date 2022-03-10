@@ -8,11 +8,13 @@ using System.Collections.Generic;
 
 using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.Internal;
 using Amazon.Runtime.Internal.Auth;
 using Amazon.S3;
 using Amazon.Util;
 
 using Newtonsoft.Json;
+
 
 namespace ProjectN.Bolt
 {
@@ -87,6 +89,12 @@ namespace ProjectN.Bolt
             }
         }
 
+        public static void RefreshBoltEndpoints() 
+        {
+                BoltEndPoints = GetBoltEndPoints();
+                LastRefreshedTimeinUtc = DateTime.UtcNow;
+        }
+
         private static List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
         private static List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
         private static List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" };
@@ -98,11 +106,8 @@ namespace ProjectN.Bolt
 
         public static string SelectBoltEndPoint(string httpRequestMethod)
         {
-            if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > RefreshTime || BoltEndPoints is null)
-            {
-                BoltEndPoints = GetBoltEndPoints();
-                LastRefreshedTimeinUtc = DateTime.UtcNow;
-            }
+            if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > 120 || BoltEndPoints is null)
+                RefreshBoltEndpoints();
 
             var preferredOrder = HttpReadMethodTypes.Contains(httpRequestMethod) ? ReadOrderEndpoints : WriteOrderEndpoints;
             var random = new Random();
@@ -120,7 +125,7 @@ namespace ProjectN.Bolt
 
 
         }
-
+ 
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
             // The UrlToFetchLatestBoltEndPoints will be replaced with dynamic bolt api endpoint based on the http method type of S3 operation's request. You can check the related code in BoltSigner.cs
@@ -294,6 +299,22 @@ namespace ProjectN.Bolt
         protected override AbstractAWSSigner CreateSigner()
         {
             return new BoltSigner();
+        }
+        protected override void CustomizeRuntimePipeline(RuntimePipeline pipeline)
+        {
+            base.CustomizeRuntimePipeline(pipeline);
+            if(this.Config.RetryMode == RequestRetryMode.Legacy)
+            {
+                pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(new BoltRetryPolicy(this.Config)));
+            }
+            if(this.Config.RetryMode == RequestRetryMode.Standard)
+            {
+                pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(new BoltStandardRetryPolicy(this.Config)));
+            }
+            if(this.Config.RetryMode == RequestRetryMode.Adaptive)
+            {
+                pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(new BoltAdaptiveRetryPolicy(this.Config)));
+            }
         }
     }
 }
