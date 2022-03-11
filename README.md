@@ -16,7 +16,7 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
    ```<?xml version="1.0" encoding="UTF-8" ?>
    <configuration>
      <appSettings>
-       <add key="CUSTOM_DOMAIN" value="{subdomain}" />
+       <add key="CUSTOM_DOMAIN" value="{custom_domain}" />
      </appSettings>
    </configuration>
    ```
