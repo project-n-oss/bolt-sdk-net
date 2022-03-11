@@ -6,9 +6,9 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
 
 ## Using .NET SDK for Bolt
 
-* Install the SDK package into your project using dotnet CLI:
+* Clone and compile the SDK repo into your project :
    ```bash
-   dotnet add package ProjectN.Bolt --version 1.0.1
+   git clone https://github.com/project-n-oss/bolt-sdk-net
    ```
    
 * Add the configurable parameters to app.config
