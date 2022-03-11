@@ -10,3 +10,14 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
    ```bash
    dotnet add package ProjectN.Bolt --version 1.0.1
    ```
+   
+* Add the configurable parameters to app.config
+
+   ```<?xml version="1.0" encoding="UTF-8" ?>
+   <configuration>
+     <appSettings>
+       <add key="SERVICE_URL" value="https://quicksilver.{region}.{subdomain}" />
+       <add key="BOLT_HOSTNAME" value="bolt.{region}.{subdomain}" />
+     </appSettings>
+   </configuration>
+   ```
