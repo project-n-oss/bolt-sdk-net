@@ -37,21 +37,13 @@ namespace ProjectN.Bolt
             ILogger logger,
             Func<IExecutionContext, Exception, bool> baseRetryForException)
         {
-            Console.WriteLine($"Message: {exception.Message}");
-            Console.WriteLine($"Exception: {exception}");
-
-            // If we encounter connection refused errors, refresh available endpoints and try with a new one
+            // If we encounter server side socket errors, refresh available endpoints and try with a new one
             var httpException = exception as HttpRequestException;
             if (httpException != null)
             {
-                Console.WriteLine($"Inner Exception: {httpException.InnerException}");
-
                 var socketException = httpException.InnerException as SocketException;
                 if (socketException != null)
                 {
-                    Console.WriteLine($"Socket Exception: {socketException}");
-                    Console.WriteLine($"Socket Error Code: {socketException.SocketErrorCode}");
-
                     switch (socketException.SocketErrorCode)
                     {
                         case SocketError.AddressNotAvailable:
@@ -74,10 +66,7 @@ namespace ProjectN.Bolt
                         case SocketError.SystemNotReady:
                         case SocketError.TimedOut:
                         case SocketError.TryAgain:
-                            Console.WriteLine($"Errored Host: {executionContext.RequestContext.Request.Endpoint.Host}");
-                            Console.WriteLine("Refreshing endpoints...");
                             BoltS3Client.RefreshBoltEndpoints(executionContext.RequestContext.Request.Endpoint.Host);
-                            Console.WriteLine("Refreshed endpoints");
                             return true;
 
                         default:

@@ -45,18 +45,12 @@ namespace ProjectN.Bolt
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
                     ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
 
-        public static readonly string BoltHostname = (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
-                    ?.Replace("{region}", Region)
-                    ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
+        private static readonly string CustomDomain = (ConfigurationManager.AppSettings["CUSTOM_DOMAIN"] ?? Environment.GetEnvironmentVariable("CUSTOM_DOMAIN"))
+                    ?? throw new InvalidOperationException("CUSTOM_DOMAIN not defined in app config or evironment.");
 
-        private static readonly string QuicksilverUrl = new Func<string>(() =>
-        {
-            var baseServiceUrl = (ConfigurationManager.AppSettings["SERVICE_URL"] ?? Environment.GetEnvironmentVariable("SERVICE_URL"))
-                    ?.Replace("{region}", Region)
-                    ?? throw new InvalidOperationException("SERVICE_URL not defined in app config or evironment.");
+        public static readonly string BoltHostname = $"bolt.{Region}.{CustomDomain}";
 
-            return $"{baseServiceUrl}/services/bolt?az={AvailabilityZoneId}";
-        })();
+        private static readonly string QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={AvailabilityZoneId}";
 
         private static readonly List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
         private static readonly List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
@@ -70,12 +64,10 @@ namespace ProjectN.Bolt
 
         private static async Task<Dictionary<string, List<string>>> GetBoltEndPoints(string errIp)
         {
-            Console.WriteLine("getting endpoints...");
             var requestUrl = errIp.Length > 0 ? $"{QuicksilverUrl}&err={errIp}" : QuicksilverUrl;
             using (var result = await qsClient.GetAsync(requestUrl))
             {
                 var responseString = await result.Content.ReadAsStringAsync();
-                Console.WriteLine($"got endpoints: {responseString}");
                 return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
             }
         }
@@ -123,12 +115,10 @@ namespace ProjectN.Bolt
                 }
             }
             RefreshTime = DateTime.UtcNow.AddSeconds(RandGenerator.Next(60, 180));
-            Console.WriteLine($"Next Refresh: {RefreshTime}");
         }
 
         public static Uri SelectBoltEndPoint(string httpRequestMethod)
         {
-            Console.WriteLine($"Now {DateTime.UtcNow} vs. Refresh {RefreshTime}");
             if (DateTime.UtcNow > RefreshTime || BoltEndPoints is null)
                 RefreshBoltEndpoints("");
 
@@ -140,7 +130,6 @@ namespace ProjectN.Bolt
                     if (BoltEndPoints.ContainsKey(endPointsKey) && BoltEndPoints[endPointsKey].Count > 0)
                     {
                         var selectedEndpoint = BoltEndPoints[endPointsKey][RandGenerator.Next(BoltEndPoints[endPointsKey].Count)];
-                        Console.WriteLine($"selected endpoint {selectedEndpoint}");
                         return new Uri($"https://{selectedEndpoint}");
                     }
             }
