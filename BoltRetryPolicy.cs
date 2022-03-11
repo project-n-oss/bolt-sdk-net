@@ -74,12 +74,10 @@ namespace ProjectN.Bolt
                         case SocketError.SystemNotReady:
                         case SocketError.TimedOut:
                         case SocketError.TryAgain:
+                            Console.WriteLine($"Errored Host: {executionContext.RequestContext.Request.Endpoint.Host}");
                             Console.WriteLine("Refreshing endpoints...");
-                            BoltS3Client.RefreshBoltEndpoints();
+                            BoltS3Client.RefreshBoltEndpoints(executionContext.RequestContext.Request.Endpoint.Host);
                             Console.WriteLine("Refreshed endpoints");
-                            Console.WriteLine($"Endpoint before: {executionContext.RequestContext.Request.Endpoint}");
-                            executionContext.RequestContext.Request.Endpoint = BoltS3Client.SelectBoltEndPoint(executionContext.RequestContext.Request.HttpMethod);
-                            Console.WriteLine($"Endpoint after: {executionContext.RequestContext.Request.Endpoint}");
                             return true;
 
                         default:
