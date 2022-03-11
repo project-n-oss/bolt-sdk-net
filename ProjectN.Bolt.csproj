@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>ProjectN.Bolt</PackageId>
-    <PackageVersion>1.0.2</PackageVersion>
+    <PackageVersion>1.5.0</PackageVersion>
     <Authors>ProjectN</Authors>
     <Description>Bolt .NET SDK</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -17,5 +17,23 @@
       <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.124" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
       <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="ProjectN.Bolt" />
+    <None Remove="AWSSDK.Core" />
+    <None Remove="AWSSDK.S3" />
+    <None Remove="AWSSDK.SecurityToken" />
+    <None Remove="Microsoft.Bcl.AsyncInterfaces" />
+    <None Remove="Newtonsoft.Json" />
+    <None Remove="System.Buffers" />
+    <None Remove="System.Configuration.ConfigurationManager" />
+    <None Remove="System.Memory" />
+    <None Remove="System.Numerics.Vectors" />
+    <None Remove="System.Runtime.CompilerServices.Unsafe" />
+    <None Remove="System.Security.AccessControl" />
+    <None Remove="System.Security.Cryptography.ProtectedData" />
+    <None Remove="System.Security.Permissions" />
+    <None Remove="System.Security.Principal.Windows" />
+    <None Remove="System.Threading.Tasks.Extensions" />
   </ItemGroup>
 </Project>

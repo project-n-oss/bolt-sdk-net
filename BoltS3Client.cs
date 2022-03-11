@@ -3,7 +3,6 @@ using System.IO;
 using System.Net;
 using System.Configuration;
 
-using System.Linq;
 using System.Collections.Generic;
 
 using Amazon;
@@ -36,19 +35,19 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static string Region = Environment.GetEnvironmentVariable("AWS_REGION")
+        private static readonly string Region = Environment.GetEnvironmentVariable("AWS_REGION")
                    ?? EC2InstanceMetadata.Region?.SystemName
                    ?? throw new InvalidOperationException("Region not available in EC2InstanceMetadata, and also not defined in environment.");
 
-        private static string AvailabilityZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
+        private static readonly string AvailabilityZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
                     ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
 
-        public static string BoltHostname = (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
+        public static readonly string BoltHostname = (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
                     ?.Replace("{region}", Region)
                     ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
 
-        private static string UrlToFetchLatestBoltEndPoints = new Func<string>(() =>
+        private static readonly string UrlToFetchLatestBoltEndPoints = new Func<string>(() =>
         {
             var baseServiceUrl = (ConfigurationManager.AppSettings["SERVICE_URL"] ?? Environment.GetEnvironmentVariable("SERVICE_URL"))
                     ?.Replace("{region}", Region)
@@ -57,58 +56,53 @@ namespace ProjectN.Bolt
             return $"{baseServiceUrl}/services/bolt?az={AvailabilityZoneId}";
         })();
 
+        private static readonly List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
+        private static readonly List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
+        private static readonly List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" }; // S3 operations get converted to one of the standard HTTP request methods https://docs.aws.amazon.com/apigateway/latest/developerguide/integrating-api-with-aws-services-s3.html
+        private static readonly Random RandGenerator = new Random();
+        private static DateTime RefreshTime = DateTime.UtcNow.AddSeconds(RandGenerator.Next(60, 180));
+
+        private static Dictionary<string, List<string>> BoltEndPoints = null;
+
         private static Dictionary<string, List<string>> GetBoltEndPoints()
         {
+            Console.WriteLine("getting endpoints...");
             var ServiceURLRequest = WebRequest.Create(UrlToFetchLatestBoltEndPoints);
             var httpResponse = ServiceURLRequest.GetResponse();
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
                 var responseString = streamReader.ReadToEnd();
+                Console.WriteLine($"got endpoints: {responseString}");
                 return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
             }
         }
 
         public static void RefreshBoltEndpoints() 
         {
-                BoltEndPoints = GetBoltEndPoints();
-                LastRefreshedTimeinUtc = DateTime.UtcNow;
+            BoltEndPoints = GetBoltEndPoints();
+            RefreshTime = DateTime.UtcNow.AddSeconds(RandGenerator.Next(60, 180));
+            Console.WriteLine($"Next Refresh: {RefreshTime}");
         }
 
-        private static List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
-        private static List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
-        private static List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" }; // S3 operations get converted to one of the standard HTTP request methods https://docs.aws.amazon.com/apigateway/latest/developerguide/integrating-api-with-aws-services-s3.html
-
-        private static DateTime LastRefreshedTimeinUtc = DateTime.UtcNow;
-        private static Dictionary<string, List<string>> BoltEndPoints = null;
-
-        private static int RefreshTime = new Random().Next(60, 180);
-
-        public static string SelectBoltEndPoint(string httpRequestMethod)
+        public static Uri SelectBoltEndPoint(string httpRequestMethod)
         {
-            if ((DateTime.UtcNow - LastRefreshedTimeinUtc).TotalSeconds > 120 || BoltEndPoints is null)
+            Console.WriteLine($"Now {DateTime.UtcNow} vs. Refresh {RefreshTime}");
+            if (DateTime.UtcNow > RefreshTime || BoltEndPoints is null)
                 RefreshBoltEndpoints();
 
             var preferredOrder = HttpReadMethodTypes.Contains(httpRequestMethod) ? ReadOrderEndpoints : WriteOrderEndpoints;
-            var random = new Random();
             foreach (var endPointsKey in preferredOrder)
-            {
                 if (BoltEndPoints.ContainsKey(endPointsKey) && BoltEndPoints[endPointsKey].Count > 0)
                 {
-                    var methodRelatedEndPoints = BoltEndPoints[endPointsKey].Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
-                    var randomIndex = random.Next(methodRelatedEndPoints.Count);
-                    return methodRelatedEndPoints[randomIndex];
+                    var selectedEndpoint = BoltEndPoints[endPointsKey][RandGenerator.Next(BoltEndPoints[endPointsKey].Count)];
+                    Console.WriteLine($"selected endpoint {selectedEndpoint}");
+                    return new Uri($"https://{selectedEndpoint}");
                 }
-            }
-
             throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {UrlToFetchLatestBoltEndPoints}");
-
-
         }
  
         private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
         {
-            // The UrlToFetchLatestBoltEndPoints will be replaced with dynamic bolt api endpoint based on the http method type of S3 operation's request. You can check the related code in BoltSigner.cs
-            ServiceURL = UrlToFetchLatestBoltEndPoints,
             ForcePathStyle = true,
         };
 
@@ -172,7 +166,6 @@ namespace ProjectN.Bolt
         /// <param name="config">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AmazonS3Config config) : base(config)
         {
-            config.ServiceURL = UrlToFetchLatestBoltEndPoints;
             config.ForcePathStyle = true;
         }
 
@@ -197,7 +190,6 @@ namespace ProjectN.Bolt
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
         {
-            clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
             clientConfig.ForcePathStyle = true;
         }
 
@@ -232,7 +224,6 @@ namespace ProjectN.Bolt
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig) : base(
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
-            clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
             clientConfig.ForcePathStyle = true;
         }
 
@@ -271,7 +262,6 @@ namespace ProjectN.Bolt
             AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
-            clientConfig.ServiceURL = UrlToFetchLatestBoltEndPoints;
         }
 
         /// <summary>Creates the signer for the service.</summary>
@@ -279,21 +269,28 @@ namespace ProjectN.Bolt
         {
             return new BoltSigner();
         }
+        /// <summary>
+        /// Adds custom retry handler to client to refresh bolt endpoints on error
+        /// </summary>
+        /// <param name="pipeline"></param>
         protected override void CustomizeRuntimePipeline(RuntimePipeline pipeline)
         {
             base.CustomizeRuntimePipeline(pipeline);
-            if(this.Config.RetryMode == RequestRetryMode.Legacy)
+            RetryPolicy retryPolicy;
+            switch (Config.RetryMode)
             {
-                pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(new BoltRetryPolicy(this.Config)));
+                case RequestRetryMode.Legacy:
+                    retryPolicy = new BoltRetryPolicy(Config);
+                    break;
+                case RequestRetryMode.Adaptive:
+                    retryPolicy = new BoltAdaptiveRetryPolicy(Config);
+                    break;
+                case RequestRetryMode.Standard:
+                default:
+                    retryPolicy = new BoltStandardRetryPolicy(Config);
+                    break;
             }
-            if(this.Config.RetryMode == RequestRetryMode.Standard)
-            {
-                pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(new BoltStandardRetryPolicy(this.Config)));
-            }
-            if(this.Config.RetryMode == RequestRetryMode.Adaptive)
-            {
-                pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(new BoltAdaptiveRetryPolicy(this.Config)));
-            }
+            pipeline.ReplaceHandler<RetryHandler>(new RetryHandler(retryPolicy));
         }
     }
 }

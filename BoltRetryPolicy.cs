@@ -1,10 +1,11 @@
 using Amazon.Runtime;
 using Amazon.Runtime.Internal;
 using System;
-using System.Net;
 using Amazon.S3.Internal;
 using Amazon.Runtime.Internal.Util;
 using System.Threading.Tasks;
+using System.Net.Http;
+using System.Net.Sockets;
 
 #pragma warning disable 1998
 
@@ -13,7 +14,7 @@ namespace ProjectN.Bolt
 {
     public partial class BoltRetryPolicy : AmazonS3RetryPolicy
     {
-         /// <summary>
+        /// <summary>
         /// Constructor for BoltRetryPolicy.
         /// </summary>
         /// <param name="config">The IClientConfig object</param>
@@ -36,18 +37,60 @@ namespace ProjectN.Bolt
             ILogger logger,
             Func<IExecutionContext, Exception, bool> baseRetryForException)
         {
-            var serviceException = exception as AmazonServiceException;
-            if (serviceException != null && serviceException.StatusCode >= HttpStatusCode.InternalServerError)
-            {
-                BoltS3Client.RefreshBoltEndpoints();
-                executionContext.RequestContext.Request.Endpoint = new Uri($"https://{BoltS3Client.SelectBoltEndPoint(executionContext.RequestContext.Request.HttpMethod)}");
-                return true;
-            }
+            Console.WriteLine($"Message: {exception.Message}");
+            Console.WriteLine($"Exception: {exception}");
 
+            // If we encounter connection refused errors, refresh available endpoints and try with a new one
+            var httpException = exception as HttpRequestException;
+            if (httpException != null)
+            {
+                Console.WriteLine($"Inner Exception: {httpException.InnerException}");
+
+                var socketException = httpException.InnerException as SocketException;
+                if (socketException != null)
+                {
+                    Console.WriteLine($"Socket Exception: {socketException}");
+                    Console.WriteLine($"Socket Error Code: {socketException.SocketErrorCode}");
+
+                    switch (socketException.SocketErrorCode)
+                    {
+                        case SocketError.AddressNotAvailable:
+                        case SocketError.ConnectionAborted:
+                        case SocketError.ConnectionRefused:
+                        case SocketError.ConnectionReset:
+                        case SocketError.Disconnecting:
+                        case SocketError.Fault:
+                        case SocketError.HostDown:
+                        case SocketError.HostNotFound:
+                        case SocketError.HostUnreachable:
+                        case SocketError.Interrupted:
+                        case SocketError.NetworkDown:
+                        case SocketError.NetworkReset:
+                        case SocketError.NetworkUnreachable:
+                        case SocketError.NotConnected:
+                        case SocketError.OperationAborted:
+                        case SocketError.Shutdown:
+                        case SocketError.SocketError:
+                        case SocketError.SystemNotReady:
+                        case SocketError.TimedOut:
+                        case SocketError.TryAgain:
+                            Console.WriteLine("Refreshing endpoints...");
+                            BoltS3Client.RefreshBoltEndpoints();
+                            Console.WriteLine("Refreshed endpoints");
+                            Console.WriteLine($"Endpoint before: {executionContext.RequestContext.Request.Endpoint}");
+                            executionContext.RequestContext.Request.Endpoint = BoltS3Client.SelectBoltEndPoint(executionContext.RequestContext.Request.HttpMethod);
+                            Console.WriteLine($"Endpoint after: {executionContext.RequestContext.Request.Endpoint}");
+                            return true;
+
+                        default:
+                            break;
+                    }
+                }
+            }
             return baseRetryForException(executionContext, exception);
         }
 
-         /// <summary>
+        /// <summary>
         /// Return true if the request should be retried. Implements additional checks 
         /// specific to S3 on top of the checks in DefaultRetryPolicy.
         /// </summary>

@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectN.Bolt", "ProjectN.Bolt.csproj", "{DB2D8E4B-7ADC-4322-B489-2383140D4C2F}"
 EndProject
 Global
@@ -12,5 +13,16 @@ Global
 		{DB2D8E4B-7ADC-4322-B489-2383140D4C2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DB2D8E4B-7ADC-4322-B489-2383140D4C2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DB2D8E4B-7ADC-4322-B489-2383140D4C2F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.DotNetNamingPolicy = $1
+		$1.DirectoryNamespaceAssociation = PrefixedHierarchical
+		$0.TextStylePolicy = $2
+		$2.FileWidth = 80
+		$2.TabsToSpaces = True
+		$2.scope = text/x-csharp
+		$0.CSharpFormattingPolicy = $3
+		$3.scope = text/x-csharp
 	EndGlobalSection
 EndGlobal
