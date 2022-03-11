@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Configuration;
 
@@ -56,9 +54,18 @@ namespace ProjectN.Bolt
         private static readonly List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
         private static readonly List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" }; // S3 operations get converted to one of the standard HTTP request methods https://docs.aws.amazon.com/apigateway/latest/developerguide/integrating-api-with-aws-services-s3.html
         private static readonly Random RandGenerator = new Random();
+        private static readonly object syncLock = new object();
+        public static int Rand(int min, int max)
+        {
+            lock (syncLock)
+            {
+                return RandGenerator.Next(min, max);
+            }
+        }
+
         private static readonly HttpClient qsClient = new HttpClient();
         private static ReaderWriterLockSlim endpointCacheLock = new ReaderWriterLockSlim();
-        private static DateTime RefreshTime = DateTime.UtcNow.AddSeconds(RandGenerator.Next(60, 180));
+        private static DateTime RefreshTime = DateTime.UtcNow.AddSeconds(120);
 
         private static Dictionary<string, List<string>> BoltEndPoints = null;
 
@@ -114,7 +121,7 @@ namespace ProjectN.Bolt
                     endpointCacheLock.ExitUpgradeableReadLock();
                 }
             }
-            RefreshTime = DateTime.UtcNow.AddSeconds(RandGenerator.Next(60, 180));
+            RefreshTime = DateTime.UtcNow.AddSeconds(Rand(60, 180));
         }
 
         public static Uri SelectBoltEndPoint(string httpRequestMethod)
@@ -129,7 +136,7 @@ namespace ProjectN.Bolt
                 foreach (var endPointsKey in preferredOrder)
                     if (BoltEndPoints.ContainsKey(endPointsKey) && BoltEndPoints[endPointsKey].Count > 0)
                     {
-                        var selectedEndpoint = BoltEndPoints[endPointsKey][RandGenerator.Next(BoltEndPoints[endPointsKey].Count)];
+                        var selectedEndpoint = BoltEndPoints[endPointsKey][Rand(0, BoltEndPoints[endPointsKey].Count)];
                         return new Uri($"https://{selectedEndpoint}");
                     }
             }
