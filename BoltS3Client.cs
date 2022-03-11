@@ -34,47 +34,26 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static string Region
-        {
-            get
-            {
-                return Environment.GetEnvironmentVariable("AWS_REGION")
-                    ?? EC2InstanceMetadata.Region?.SystemName
-                    ?? throw new InvalidOperationException("Region not available in EC2InstanceMetadata, and also not defined in environment.");
-            }
-        }
+        private static string Region = Environment.GetEnvironmentVariable("AWS_REGION")
+                   ?? EC2InstanceMetadata.Region?.SystemName
+                   ?? throw new InvalidOperationException("Region not available in EC2InstanceMetadata, and also not defined in environment.");
 
-        private static string AvailabilityZoneId
-        {
-            get
-            {
-                return Environment.GetEnvironmentVariable("AWS_ZONE_ID")
+        private static string AvailabilityZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
                     ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
-            }
-        }
 
-        public static string BoltHostname
-        {
-            get
-            {
-                return (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
+        public static string BoltHostname = (ConfigurationManager.AppSettings["BOLT_HOSTNAME"] ?? Environment.GetEnvironmentVariable("BOLT_HOSTNAME"))
                     ?.Replace("{region}", Region)
                     ?? throw new InvalidOperationException("BOLT_HOSTNAME not defined in app config or evironment.");
-            }
-        }
 
-        private static string UrlToFetchLatestBoltEndPoints
+        private static string UrlToFetchLatestBoltEndPoints = new Func<string>(() =>
         {
-            get
-            {
-                var baseServiceUrl = (ConfigurationManager.AppSettings["SERVICE_URL"] ?? Environment.GetEnvironmentVariable("SERVICE_URL"))
+            var baseServiceUrl = (ConfigurationManager.AppSettings["SERVICE_URL"] ?? Environment.GetEnvironmentVariable("SERVICE_URL"))
                     ?.Replace("{region}", Region)
                     ?? throw new InvalidOperationException("SERVICE_URL not defined in app config or evironment.");
 
-                return $"{baseServiceUrl}/services/bolt?az={AvailabilityZoneId}";
-            }
-        }
+            return $"{baseServiceUrl}/services/bolt?az={AvailabilityZoneId}";
+        })();
 
         private static Dictionary<string, List<string>> GetBoltEndPoints()
         {
