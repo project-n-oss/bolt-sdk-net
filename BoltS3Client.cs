@@ -68,10 +68,10 @@ namespace ProjectN.Bolt
 
         private static List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
         private static List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
-        private static List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" };
+        private static List<string> HttpReadMethodTypes = new List<string> { "GET", "HEAD" }; // S3 operations get converted to one of the standard HTTP request methods https://docs.aws.amazon.com/apigateway/latest/developerguide/integrating-api-with-aws-services-s3.html
 
         private static DateTime LastRefreshedTimeinUtc = DateTime.UtcNow;
-        private static Dictionary<string, List<string>> BoltEndPoints = null; // TODO: Move static class level to instance level so as to make thread safe
+        private static Dictionary<string, List<string>> BoltEndPoints = null;
 
         private static int RefreshTime = new Random().Next(60, 180);
 
