@@ -14,7 +14,7 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
 * Set the bolt custom domain configuration
 
    ```cs
-    BoltConfiguration.CustomDomain = "{Custom Domain}";
+    BoltConfiguration.CustomDomain = "{Bolt Custom Domain}";
    ```
     
    This configuration option should be placed in somewhere like Starup.cs or so, the goal here is to set the configuratioin option .
@@ -39,4 +39,4 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
     }
     ```
 
-   Custom domain can also be set through the environment variable 'CUSTOM_DOMAIN'
+   Bolt custom domain can also be set through the environment variable 'BOLT_CUSTOM_DOMAIN'

@@ -18,7 +18,7 @@ namespace ProjectN.Bolt
 {
     public static class BoltConfiguration
     {
-        public static string CustomDomain = Environment.GetEnvironmentVariable("CUSTOM_DOMAIN");
+        public static string CustomDomain = Environment.GetEnvironmentVariable("BOLT_CUSTOM_DOMAIN");
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ namespace ProjectN.Bolt
 
         private static void UseBoltConfiguration()
         {
-            CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
+            CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("BOLT_CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
             BoltHostname = $"bolt.{Region}.{CustomDomain}";
             QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={AvailabilityZoneId}";
         }
