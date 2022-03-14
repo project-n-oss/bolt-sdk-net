@@ -11,7 +11,9 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
     git clone https://github.com/project-n-oss/bolt-sdk-net
    ```
    
-* Set the bolt custom domain configuration
+* Configure the bolt custom domain, this can be done through either one of the below.
+    * Set up environment variable 'BOLT_CUSTOM_DOMAIN'
+    * Set up BoltConfiguration.CustomDomain
 
    ```cs
     BoltConfiguration.CustomDomain = "{Bolt Custom Domain}";
@@ -38,5 +40,3 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
         ...
     }
     ```
-
-   Bolt custom domain can also be set through the environment variable 'BOLT_CUSTOM_DOMAIN'
