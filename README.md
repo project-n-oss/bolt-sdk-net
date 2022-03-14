@@ -8,15 +8,35 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
 
 * Clone and compile the SDK repo into your project :
    ```bash
-   git clone https://github.com/project-n-oss/bolt-sdk-net
+    git clone https://github.com/project-n-oss/bolt-sdk-net
    ```
    
-* Add the configurable parameters to app.config
+* Set the bolt custom domain configuration
 
-   ```<?xml version="1.0" encoding="UTF-8" ?>
-   <configuration>
-     <appSettings>
-       <add key="CUSTOM_DOMAIN" value="{custom_domain}" />
-     </appSettings>
-   </configuration>
+   ```cs
+    BoltConfiguration.CustomDomain = "{Custom Domain}";
    ```
+    
+   This configuration option should be placed in somewhere like Starup.cs or so, the goal here is to set the configuratioin option .
+
+   Ex:  
+   ```cs
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
+        {
+            BoltConfiguration.CustomDomain = "dev.bolt.projectn.co";
+            ...
+        }
+        else
+        {
+            BoltConfiguration.CustomDomain = "prod.bolt.projectn.co";
+            ...
+        }
+
+        ...
+        ...
+    }
+    ```
+
+   Custom domain can also be set through the environment variable 'CUSTOM_DOMAIN'

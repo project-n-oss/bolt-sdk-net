@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackOnBuild>true</PackOnBuild>
     <PackageId>ProjectN.Bolt</PackageId>
-    <PackageVersion>2.0.0</PackageVersion>
+    <PackageVersion>2.0.1</PackageVersion>
     <Authors>ProjectN</Authors>
     <Description>Bolt .NET SDK</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
