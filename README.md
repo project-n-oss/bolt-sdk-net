@@ -17,7 +17,7 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
     BoltConfiguration.CustomDomain = "{Bolt Custom Domain}";
    ```
     
-   This configuration option should be placed in somewhere like Starup.cs or so, the goal here is to set the configuratioin option .
+   This configuration option should be placed in somewhere like Starup.cs so as to set it up before the BoltS3Client instance creation.
 
    Ex:  
    ```cs
