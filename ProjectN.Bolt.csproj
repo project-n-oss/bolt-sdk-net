@@ -16,6 +16,5 @@
       <PackageReference Include="AWSSDK.S3" Version="3.7.8.4" />
       <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.124" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-      <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
   </ItemGroup>
 </Project>
