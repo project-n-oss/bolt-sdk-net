@@ -18,6 +18,10 @@ namespace ProjectN.Bolt
 {
     public static class BoltConfiguration
     {
+        public static string Region = Environment.GetEnvironmentVariable("AWS_REGION")
+                   ?? EC2InstanceMetadata.Region?.SystemName;
+        public static string ZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
+                    ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id");
         public static string CustomDomain = Environment.GetEnvironmentVariable("BOLT_CUSTOM_DOMAIN");
     }
 
@@ -39,16 +43,12 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static readonly string Region = Environment.GetEnvironmentVariable("AWS_REGION")
-                   ?? EC2InstanceMetadata.Region?.SystemName
-                   ?? throw new InvalidOperationException("Region not available in EC2InstanceMetadata, and also not defined in environment.");
-
-        private static readonly string AvailabilityZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
-                    ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
-                    ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
-
+        private static string Region;
+        private static string ZoneId;
         private static string CustomDomain;
+
         public static string BoltHostname;
+
         private static string QuicksilverUrl;
 
         private static readonly List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
@@ -145,7 +145,7 @@ namespace ProjectN.Bolt
             {
                 endpointCacheLock.ExitReadLock();
             }
-            throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {QuicksilverUrl}");
+            throw new Exception($"No bolt api endpoints are available. Region: {Region}, ZoneId: {ZoneId}, UrlToFetchLatestBoltEndPoints: {QuicksilverUrl}");
         }
 
         private static readonly AmazonS3Config BoltS3Config = new AmazonS3Config
@@ -155,9 +155,14 @@ namespace ProjectN.Bolt
 
         private static void UseBoltConfiguration()
         {
+            Region = BoltConfiguration.Region ?? throw new InvalidOperationException("AWS_REGION is not defined through BoltConfiguration or in evironment. And also Region info not available in EC2InstanceMetadata.");
+
+            ZoneId = BoltConfiguration.ZoneId ?? throw new InvalidOperationException("AWS_ZONE_ID not defined through BoltConfiguration or in evironment. And also AvailabilityZoneId info not available in EC2InstanceMetadata.");
+
             CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("BOLT_CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
+
             BoltHostname = $"bolt.{Region}.{CustomDomain}";
-            QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={AvailabilityZoneId}";
+            QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={ZoneId}";
         }
 
         /// <summary>
