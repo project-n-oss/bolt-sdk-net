@@ -8,15 +8,43 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
 
 * Clone and compile the SDK repo into your project :
    ```bash
-   git clone https://github.com/project-n-oss/bolt-sdk-net
+    git clone https://github.com/project-n-oss/bolt-sdk-net
    ```
    
-* Add the configurable parameters to app.config
+* Configure the bolt custom domain, this can be done through either one of the below.
+    * Set up environment variable 'BOLT_CUSTOM_DOMAIN'
+    * Set up BoltConfiguration.CustomDomain
 
-   ```<?xml version="1.0" encoding="UTF-8" ?>
-   <configuration>
-     <appSettings>
-       <add key="CUSTOM_DOMAIN" value="{custom_domain}" />
-     </appSettings>
-   </configuration>
+   ```cs
+    BoltConfiguration.CustomDomain = "{Bolt Custom Domain}";
    ```
+    
+   This configuration option should be placed in somewhere like Startup.cs so as to set it up before the BoltS3Client instance creation.
+
+   Ex:  
+   ```cs
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        if (env.IsDevelopment())
+        {
+            BoltConfiguration.CustomDomain = "dev.bolt.projectn.co";
+            ...
+        }
+        else
+        {
+            BoltConfiguration.CustomDomain = "prod.bolt.projectn.co";
+            ...
+        }
+
+        ...
+        ...
+    }
+    ```
+
+* Configure the AWS Region in case if it's not available in the EC2InstanceMetadata, this can be done through either one of the below.
+    * Set up environment variable 'AWS_REGION'
+    * Set up BoltConfiguration.Region
+
+* Configure the AWS Zone Id in case if it's not available in the EC2InstanceMetadata, this can be done through either one of the below.
+    * Set up environment variable 'AWS_ZONE_ID'
+    * Set up BoltConfiguration.ZoneId

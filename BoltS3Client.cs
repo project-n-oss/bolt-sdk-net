@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Http;
-using System.Configuration;
 
 using System.Collections.Generic;
 
@@ -17,6 +16,15 @@ using System.Threading;
 
 namespace ProjectN.Bolt
 {
+    public static class BoltConfiguration
+    {
+        public static string Region = Environment.GetEnvironmentVariable("AWS_REGION")
+                   ?? EC2InstanceMetadata.Region?.SystemName;
+        public static string ZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
+                    ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id");
+        public static string CustomDomain = Environment.GetEnvironmentVariable("BOLT_CUSTOM_DOMAIN");
+    }
+
     /// <summary>
     /// Implementation for accessing S3 via Bolt.
     ///
@@ -35,20 +43,13 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static readonly string Region = Environment.GetEnvironmentVariable("AWS_REGION")
-                   ?? EC2InstanceMetadata.Region?.SystemName
-                   ?? throw new InvalidOperationException("Region not available in EC2InstanceMetadata, and also not defined in environment.");
+        private static string Region;
+        private static string ZoneId;
+        private static string CustomDomain;
 
-        private static readonly string AvailabilityZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
-                    ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id")
-                    ?? throw new InvalidOperationException("AvailabilityZoneId not available in EC2InstanceMetadata, and also not defined in environment.");
+        public static string BoltHostname;
 
-        private static readonly string CustomDomain = (ConfigurationManager.AppSettings["CUSTOM_DOMAIN"] ?? Environment.GetEnvironmentVariable("CUSTOM_DOMAIN"))
-                    ?? throw new InvalidOperationException("CUSTOM_DOMAIN not defined in app config or evironment.");
-
-        public static readonly string BoltHostname = $"bolt.{Region}.{CustomDomain}";
-
-        private static readonly string QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={AvailabilityZoneId}";
+        private static string QuicksilverUrl;
 
         private static readonly List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
         private static readonly List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
@@ -79,7 +80,7 @@ namespace ProjectN.Bolt
             }
         }
 
-        public static void RefreshBoltEndpoints(string errIp) 
+        public static void RefreshBoltEndpoints(string errIp)
         {
             if (errIp.Length > 0)
             {
@@ -105,15 +106,15 @@ namespace ProjectN.Bolt
                     // TODO: only need to take write lock if endpoints are actually different
                     //if (EndpointsChanged(result))
                     //{
-                        endpointCacheLock.EnterWriteLock();
-                        try
-                        {
-                            BoltEndPoints = result;
-                        }
-                        finally
-                        {
-                            endpointCacheLock.ExitWriteLock();
-                        }
+                    endpointCacheLock.EnterWriteLock();
+                    try
+                    {
+                        BoltEndPoints = result;
+                    }
+                    finally
+                    {
+                        endpointCacheLock.ExitWriteLock();
+                    }
                     //}
                 }
                 finally
@@ -144,13 +145,25 @@ namespace ProjectN.Bolt
             {
                 endpointCacheLock.ExitReadLock();
             }
-            throw new Exception($"No bolt api endpoints are available. Region: {Region}, AvailabilityZoneId: {AvailabilityZoneId}, UrlToFetchLatestBoltEndPoints: {QuicksilverUrl}");
+            throw new Exception($"No bolt api endpoints are available. Region: {Region}, ZoneId: {ZoneId}, UrlToFetchLatestBoltEndPoints: {QuicksilverUrl}");
         }
- 
-        private static readonly AmazonS3Config BoltConfig = new AmazonS3Config
+
+        private static readonly AmazonS3Config BoltS3Config = new AmazonS3Config
         {
             ForcePathStyle = true,
         };
+
+        private static void UseBoltConfiguration()
+        {
+            Region = BoltConfiguration.Region ?? throw new InvalidOperationException("AWS_REGION is not defined through BoltConfiguration or in evironment. And also Region info not available in EC2InstanceMetadata.");
+
+            ZoneId = BoltConfiguration.ZoneId ?? throw new InvalidOperationException("AWS_ZONE_ID not defined through BoltConfiguration or in evironment. And also AvailabilityZoneId info not available in EC2InstanceMetadata.");
+
+            CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("BOLT_CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
+
+            BoltHostname = $"bolt.{Region}.{CustomDomain}";
+            QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={ZoneId}";
+        }
 
         /// <summary>
         /// Constructs AmazonS3Client with the credentials loaded from the application's
@@ -167,9 +180,8 @@ namespace ProjectN.Bolt
         /// </code>
         ///
         /// </summary>
-        public BoltS3Client() : base(BoltConfig)
+        public BoltS3Client() : base(BoltS3Config)
         {
-
         }
 
         /// <summary>
@@ -188,10 +200,8 @@ namespace ProjectN.Bolt
         ///
         /// </summary>
         /// <param name="region">The region to connect.</param>
-        public BoltS3Client(RegionEndpoint region) : base(BoltConfig)
+        public BoltS3Client(RegionEndpoint region) : base(BoltS3Config)
         {
-
-
         }
 
         /// <summary>
@@ -217,14 +227,14 @@ namespace ProjectN.Bolt
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
         /// <param name="credentials">AWS Credentials</param>
-        public BoltS3Client(AWSCredentials credentials) : base(credentials, BoltConfig)
+        public BoltS3Client(AWSCredentials credentials) : base(credentials, BoltS3Config)
         {
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
         /// <param name="credentials">AWS Credentials</param>
         /// <param name="region">The region to connect.</param>
-        public BoltS3Client(AWSCredentials credentials, RegionEndpoint region) : base(credentials, BoltConfig)
+        public BoltS3Client(AWSCredentials credentials, RegionEndpoint region) : base(credentials, BoltS3Config)
         {
         }
 
@@ -245,7 +255,7 @@ namespace ProjectN.Bolt
         /// <param name="awsAccessKeyId">AWS Access Key ID</param>
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey) : base(awsAccessKeyId, awsSecretAccessKey,
-            BoltConfig)
+            BoltS3Config)
         {
         }
 
@@ -256,7 +266,7 @@ namespace ProjectN.Bolt
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
         /// <param name="region">The region to connect.</param>
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, RegionEndpoint region) : base(
-            awsAccessKeyId, awsSecretAccessKey, BoltConfig)
+            awsAccessKeyId, awsSecretAccessKey, BoltS3Config)
         {
         }
 
@@ -280,7 +290,7 @@ namespace ProjectN.Bolt
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
         /// <param name="awsSessionToken">AWS Session Token</param>
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken) : base(
-            awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltConfig)
+            awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltS3Config)
         {
         }
 
@@ -292,7 +302,7 @@ namespace ProjectN.Bolt
         /// <param name="awsSessionToken">AWS Session Token</param>
         /// <param name="region">The region to connect.</param>
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
-            RegionEndpoint region) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltConfig)
+            RegionEndpoint region) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltS3Config)
         {
         }
 
@@ -313,6 +323,9 @@ namespace ProjectN.Bolt
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
         {
+            // This is called at the time of instance creation, so which equals to place in all the above class constructors
+            UseBoltConfiguration();
+
             return new BoltSigner();
         }
         /// <summary>
