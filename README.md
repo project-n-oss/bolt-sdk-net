@@ -40,3 +40,11 @@ It can be built using any of the standard .NET IDEs (including Microsoft Visual 
         ...
     }
     ```
+
+* Configure the AWS Region in case if it's not available in the EC2InstanceMetadata, this can be done through either one of the below.
+    * Set up environment variable 'AWS_REGION'
+    * Set up BoltConfiguration.Region
+
+* Configure the AWS Zone Id in case if it's not available in the EC2InstanceMetadata, this can be done through either one of the below.
+    * Set up environment variable 'AWS_ZONE_ID'
+    * Set up BoltConfiguration.ZoneId
