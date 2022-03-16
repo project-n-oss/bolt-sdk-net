@@ -73,10 +73,17 @@ namespace ProjectN.Bolt
         private static async Task<Dictionary<string, List<string>>> GetBoltEndPoints(string errIp)
         {
             var requestUrl = errIp.Length > 0 ? $"{QuicksilverUrl}&err={errIp}" : QuicksilverUrl;
-            using (var result = await qsClient.GetAsync(requestUrl))
+            try
             {
-                var responseString = await result.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
+                using (var result = await qsClient.GetAsync(requestUrl))
+                {
+                    var responseString = await result.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Quicksilver url: {requestUrl}, Message: {ex.Message}, StackTrace: {ex.StackTrace}");
             }
         }
 
