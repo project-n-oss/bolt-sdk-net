@@ -171,7 +171,8 @@ namespace ProjectN.Bolt
             ZoneId = BoltConfiguration.ZoneId ?? throw new InvalidOperationException("AWS_ZONE_ID not defined through BoltConfiguration or in evironment. And also AvailabilityZoneId info not available in EC2InstanceMetadata.");
 
             CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("BOLT_CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
-            AuthBucket = BoltConfiguration.AuthBucket ?? throw new InvalidOperationException("BOLT_AUTH_BUCKET not defined through BoltConfiguration or in evironment.");
+
+            AuthBucket = BoltConfiguration.AuthBucket; // allow this to be unset - will use source bucket resolution if not provided
 
             BoltHostname = $"bolt.{Region}.{CustomDomain}";
             QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={ZoneId}";

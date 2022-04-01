@@ -65,7 +65,7 @@ namespace ProjectN.Bolt
 
 
             // Create a S3 head request of the request path to the auth bucket.
-            var headRequest = GetObjectMetadataRequestMarshaller.Instance.Marshall(prepareHeadRequest(request)); 
+            var headRequest = GetObjectMetadataRequestMarshaller.Instance.Marshall(PrepareHeadRequest(request)); 
             headRequest.Headers["User-Agent"] = request.Headers["User-Agent"];
             headRequest.Endpoint = S3Endpoint;
             if (request.Headers.TryGetValue("X-Amz-Security-Token", out var sessionToken))
@@ -88,7 +88,7 @@ namespace ProjectN.Bolt
             request.Headers["Host"] = BoltS3Client.BoltHostname;
         }
 
-        private static GetObjectMetadataRequest prepareHeadRequest(IRequest req)
+        private static GetObjectMetadataRequest PrepareHeadRequest(IRequest req)
         {
             // we do a few things to prepare the head request we make:
             // 1. add random prefix - this improves authn throughput when using multiple clients, as each S3 prefix gets its own throttling limit - 5,500 GET or HEAD requests per second per prefix
@@ -96,7 +96,12 @@ namespace ProjectN.Bolt
             // 3. append dummy auth object - currently always 'auth`, but may change to accommodate separate read/write permissions in a future version
             var deconstructedPath = req.ResourcePath.Split('/');
             var sourceBucket = deconstructedPath.Length > 1 ? deconstructedPath[1] : "";
-            return new GetObjectMetadataRequest { BucketName = BoltS3Client.AuthBucket, Key = $"{prefix}{sourceBucket}/auth" };
+            if (BoltS3Client.AuthBucket != null) {
+                // use auth bucket resolution
+                return new GetObjectMetadataRequest { BucketName = BoltS3Client.AuthBucket, Key = $"{prefix}{sourceBucket}/auth" };
+            }
+            // use source bucket resolution, substituting a dummy bucket if no bucket is defined in the request
+            return new GetObjectMetadataRequest { BucketName = sourceBucket.Length > 0 ? sourceBucket : "n-auth-dummy", Key = $"{prefix}/auth" };
         }
         /// <summary>
         /// Calculates and signs the specified request using the AWS4 signing protocol by using the
