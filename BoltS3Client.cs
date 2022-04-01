@@ -23,6 +23,7 @@ namespace ProjectN.Bolt
         public static string ZoneId = Environment.GetEnvironmentVariable("AWS_ZONE_ID")
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id");
         public static string CustomDomain = Environment.GetEnvironmentVariable("BOLT_CUSTOM_DOMAIN");
+        public static string AuthBucket = Environment.GetEnvironmentVariable("BOLT_AUTH_BUCKET");
     }
 
     /// <summary>
@@ -43,13 +44,16 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltS3Client : AmazonS3Client
     {
-        private static string Region;
+        public static string Region;
+
         private static string ZoneId;
         private static string CustomDomain;
 
         public static string BoltHostname;
 
         private static string QuicksilverUrl;
+
+        public static string AuthBucket;
 
         private static readonly List<string> ReadOrderEndpoints = new List<string> { "main_read_endpoints", "main_write_endpoints", "failover_read_endpoints", "failover_write_endpoints" };
         private static readonly List<string> WriteOrderEndpoints = new List<string> { "main_write_endpoints", "failover_write_endpoints" };
@@ -167,6 +171,8 @@ namespace ProjectN.Bolt
             ZoneId = BoltConfiguration.ZoneId ?? throw new InvalidOperationException("AWS_ZONE_ID not defined through BoltConfiguration or in evironment. And also AvailabilityZoneId info not available in EC2InstanceMetadata.");
 
             CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("BOLT_CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
+
+            AuthBucket = BoltConfiguration.AuthBucket; // allow this to be unset - will use source bucket resolution if not provided
 
             BoltHostname = $"bolt.{Region}.{CustomDomain}";
             QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={ZoneId}";

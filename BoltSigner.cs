@@ -1,12 +1,10 @@
 using System;
-using Amazon;
-using Amazon.SecurityToken.Model;
+using System.Text;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal;
 using Amazon.Runtime.Internal.Auth;
-using Amazon.Runtime.Internal.Util;
-using Amazon.SecurityToken;
-using Amazon.SecurityToken.Model.Internal.MarshallTransformations;
+using Amazon.Runtime.Internal.Util;using Amazon.S3.Model;
+using Amazon.S3.Model.Internal.MarshallTransformations;
 using System.Collections.Generic;
 
 namespace ProjectN.Bolt
@@ -18,17 +16,22 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltSigner : AWS4Signer
     {
-        private static readonly Uri StsEndpoint = new Uri("https://sts.amazonaws.com/");
-
-        private static readonly IClientConfig StsConfig = new AmazonSecurityTokenServiceConfig
-
-        {
-            RegionEndpoint = RegionEndpoint.USEast1
-        };
-
+        private static readonly Uri S3Endpoint = new Uri($"https://s3.{BoltS3Client.Region}.amazonaws.com");
         private static readonly int roundToSeconds = 600;
         private static TimeSpan roundTo = TimeSpan.FromSeconds(roundToSeconds);
         private static TimeSpan offset = TimeSpan.FromSeconds(new Random().Next(0, roundToSeconds));
+        private static string InitializePrefix()
+        {
+            const string allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+            var rng = new Random();
+            var sb = new StringBuilder();
+            for (int i = 0; i < 4; i++)
+            {
+                sb.Append(allowedChars[rng.Next(0, allowedChars.Length)]);
+            }
+            return sb.ToString();
+        }
+        private static readonly string prefix = InitializePrefix();
 
         /// <summary>
         /// Calculates and signs the specified request using the AWS4 signing protocol by using the
@@ -60,28 +63,46 @@ namespace ProjectN.Bolt
         {
             request.Endpoint = BoltS3Client.SelectBoltEndPoint(request.HttpMethod);
 
-            // Create the canonical STS request to get caller identity, with session token if appropriate.
-            var iamRequest = GetCallerIdentityRequestMarshaller.Instance.Marshall(new GetCallerIdentityRequest());
-            iamRequest.Headers["User-Agent"] = request.Headers["User-Agent"];
-            iamRequest.Endpoint = StsEndpoint;
+
+            // Create a S3 head request of the request path to the auth bucket.
+            var headRequest = GetObjectMetadataRequestMarshaller.Instance.Marshall(PrepareHeadRequest(request)); 
+            headRequest.Headers["User-Agent"] = request.Headers["User-Agent"];
+            headRequest.Endpoint = S3Endpoint;
             if (request.Headers.TryGetValue("X-Amz-Security-Token", out var sessionToken))
             {
-                iamRequest.Headers["X-Amz-Security-Token"] = sessionToken;
+                headRequest.Headers["X-Amz-Security-Token"] = sessionToken;
             }
 
-            AWS4SigningResult awS4SigningResult =
-                SignRequest(iamRequest, StsConfig, metrics, awsAccessKeyId,
-                    awsSecretAccessKey);
+            AWS4SigningResult aws4SigningResult =
+            SignRequest(headRequest, clientConfig, metrics, awsAccessKeyId,
+                awsSecretAccessKey);
 
-            // On the receiving end, Bolt should forward these request headers to the STS GetCallerIdentity API.
-            request.Headers["X-Amz-Content-SHA256"] = iamRequest.Headers["X-Amz-Content-SHA256"];
-            request.Headers["X-Amz-Date"] = iamRequest.Headers["X-Amz-Date"];
-            request.Headers["Authorization"] = awS4SigningResult.ForAuthorizationHeader;
+            // On the receiving end, Bolt should forward these request headers to the S3 HeadObject API.
+            request.Headers["X-Amz-Content-SHA256"] = headRequest.Headers["X-Amz-Content-SHA256"];
+            request.Headers["X-Amz-Date"] = headRequest.Headers["X-Amz-Date"];
+            request.Headers["Authorization"] = aws4SigningResult.ForAuthorizationHeader;
+            // add a special header with the random prefix so Bolt knows how to construct the head request
+            request.Headers["X-Bolt-Auth-Prefix"] = prefix;
             // Use bolt hostname as the Host in the request
             // SSL certs are validated based on the Host
             request.Headers["Host"] = BoltS3Client.BoltHostname;
         }
 
+        private static GetObjectMetadataRequest PrepareHeadRequest(IRequest req)
+        {
+            // we do a few things to prepare the head request we make:
+            // 1. add random prefix - this improves authn throughput when using multiple clients, as each S3 prefix gets its own throttling limit - 5,500 GET or HEAD requests per second per prefix
+            // 2. isolate bucket from resource path - the auth requests we make are only unique per bucket, so requests for different objects in the same bucket hit the authorization cache and avoid making extra s3 calls
+            // 3. append dummy auth object - currently always 'auth`, but may change to accommodate separate read/write permissions in a future version
+            var deconstructedPath = req.ResourcePath.Split('/');
+            var sourceBucket = deconstructedPath.Length > 1 ? deconstructedPath[1] : "";
+            if (BoltS3Client.AuthBucket != null) {
+                // use auth bucket resolution
+                return new GetObjectMetadataRequest { BucketName = BoltS3Client.AuthBucket, Key = $"{prefix}{sourceBucket}/auth" };
+            }
+            // use source bucket resolution, substituting a dummy bucket if no bucket is defined in the request
+            return new GetObjectMetadataRequest { BucketName = sourceBucket.Length > 0 ? sourceBucket : "n-auth-dummy", Key = $"{prefix}/auth" };
+        }
         /// <summary>
         /// Calculates and signs the specified request using the AWS4 signing protocol by using the
         /// AWS account credentials given in the method parameters.
@@ -119,7 +140,7 @@ namespace ProjectN.Bolt
                                              string awsSecretAccessKey)
         {
             var signedAt = InitializeRoundedHeaders(request.Headers, request.Endpoint);
-            var service = "sts"; // we always sign requests for sts, and the equivalent code from the base class uses an internal method to determine the service
+            var service = "s3" ; // we always sign requests for s3, and the equivalent code from the base class uses an internal method to determine the service
 
             // the rest of the code should be identical to the implementation in the base class
             var region = DetermineSigningRegion(clientConfig, service, request.AlternateEndpoint, request);
@@ -170,7 +191,6 @@ namespace ProjectN.Bolt
             long ticks = (offsetTime.Ticks + (roundTo.Ticks / 2) + 1) / roundTo.Ticks;
             var newTime = new DateTime(ticks * roundTo.Ticks, baseDateTime.Kind);
             newTime += offset;
-
             return newTime;
         }
 
