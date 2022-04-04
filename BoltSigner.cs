@@ -20,9 +20,9 @@ namespace ProjectN.Bolt
         private static readonly int roundToSeconds = 600;
         private static TimeSpan roundTo = TimeSpan.FromSeconds(roundToSeconds);
         private static TimeSpan offset = TimeSpan.FromSeconds(new Random().Next(0, roundToSeconds));
+        private static readonly string allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
         private static string InitializePrefix()
         {
-            const string allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
             var rng = new Random();
             var sb = new StringBuilder();
             for (int i = 0; i < 4; i++)
