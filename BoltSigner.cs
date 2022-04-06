@@ -16,7 +16,7 @@ namespace ProjectN.Bolt
     /// </summary>
     public class BoltSigner : AWS4Signer
     {
-        private static readonly Uri S3Endpoint = new Uri($"https://s3.{BoltS3Client.Region}.amazonaws.com");
+        private static Uri S3Endpoint;
         private static readonly int roundToSeconds = 600;
         private static TimeSpan roundTo = TimeSpan.FromSeconds(roundToSeconds);
         private static TimeSpan offset = TimeSpan.FromSeconds(new Random().Next(0, roundToSeconds));
@@ -63,6 +63,10 @@ namespace ProjectN.Bolt
         {
             request.Endpoint = BoltS3Client.SelectBoltEndPoint(request.HttpMethod);
 
+            // The S3 endpoint is initially unset, since it relies on the dynamic BoltS3Client
+            // configuration that will be initialized after the first call to `SelectBoltEndpoint`
+            if (S3Endpoint == null)
+                S3Endpoint = new Uri($"https://s3.{BoltS3Client.Region}.amazonaws.com");
 
             // Create a S3 head request of the request path to the auth bucket.
             var headRequest = GetObjectMetadataRequestMarshaller.Instance.Marshall(PrepareHeadRequest(request)); 

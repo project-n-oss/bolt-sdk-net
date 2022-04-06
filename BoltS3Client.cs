@@ -76,6 +76,10 @@ namespace ProjectN.Bolt
 
         private static async Task<Dictionary<string, List<string>>> GetBoltEndPoints(string errIp)
         {
+            // lazy load config
+            if (QuicksilverUrl == null)
+                UseBoltConfiguration();
+
             var requestUrl = errIp.Length > 0 ? $"{QuicksilverUrl}&err={errIp}" : QuicksilverUrl;
             try
             {
@@ -336,9 +340,6 @@ namespace ProjectN.Bolt
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
         {
-            // This is called at the time of instance creation, so which equals to place in all the above class constructors
-            UseBoltConfiguration();
-
             return new BoltSigner();
         }
         /// <summary>
