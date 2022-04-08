@@ -93,15 +93,13 @@ namespace ProjectN.Bolt
             catch (Exception ex)
             {
                 retryAttempts++;
-                if (retryAttempts < 5)
+                if (retryAttempts <= 2)
                 {
                     Thread.Sleep(200 * retryAttempts);
-
                     return await GetBoltEndPoints(errIp);
                 }
 
-
-                throw new Exception($"Quicksilver url: {requestUrl}, Message: {ex.Message}, StackTrace: {ex.StackTrace}");
+                // throw new Exception($"Quicksilver url: {requestUrl}, Message: {ex.Message}, StackTrace: {ex.StackTrace}");
             }
         }
 
