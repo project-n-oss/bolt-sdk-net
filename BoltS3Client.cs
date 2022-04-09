@@ -73,7 +73,6 @@ namespace ProjectN.Bolt
         private static DateTime RefreshTime = DateTime.UtcNow.AddSeconds(120);
 
         private static Dictionary<string, List<string>> BoltEndPoints = null;
-        private static int retryAttempts = 0;
         private static async Task<Dictionary<string, List<string>>> GetBoltEndPoints(string errIp)
         {
             // lazy load config
@@ -86,20 +85,12 @@ namespace ProjectN.Bolt
                 using (var result = await qsClient.GetAsync(requestUrl))
                 {
                     var responseString = await result.Content.ReadAsStringAsync();
-                    retryAttempts = 0;
                     return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                retryAttempts++;
-                if (retryAttempts <= 2)
-                {
-                    Thread.Sleep(200 * retryAttempts);
-                    return await GetBoltEndPoints(errIp);
-                }
-
-                // throw new Exception($"Quicksilver url: {requestUrl}, Message: {ex.Message}, StackTrace: {ex.StackTrace}");
+                return BoltEndPoints;
             }
         }
 
