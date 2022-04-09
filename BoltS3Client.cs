@@ -88,9 +88,14 @@ namespace ProjectN.Bolt
                     return JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(responseString);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                return BoltEndPoints;
+                if ((BoltEndPoints?.Count ?? 0) > 0)
+                {
+                    return BoltEndPoints;
+                }
+
+                throw new Exception($"Quicksilver url: {requestUrl}, Message: {ex.Message}, StackTrace: {ex.StackTrace}");
             }
         }
 
