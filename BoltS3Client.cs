@@ -73,7 +73,6 @@ namespace ProjectN.Bolt
         private static DateTime RefreshTime = DateTime.UtcNow.AddSeconds(120);
 
         private static Dictionary<string, List<string>> BoltEndPoints = null;
-
         private static async Task<Dictionary<string, List<string>>> GetBoltEndPoints(string errIp)
         {
             // lazy load config
@@ -91,6 +90,11 @@ namespace ProjectN.Bolt
             }
             catch (Exception ex)
             {
+                if ((BoltEndPoints?.Count ?? 0) > 0)
+                {
+                    return BoltEndPoints;
+                }
+
                 throw new Exception($"Quicksilver url: {requestUrl}, Message: {ex.Message}, StackTrace: {ex.StackTrace}");
             }
         }
