@@ -166,10 +166,18 @@ namespace ProjectN.Bolt
             }
             throw new Exception($"No bolt api endpoints are available. Region: {Region}, ZoneId: {ZoneId}, UrlToFetchLatestBoltEndPoints: {QuicksilverUrl}");
         }
+        private static readonly TimeSpan defaultTimeout = TimeSpan.FromSeconds(100);
+        private static readonly TimeSpan defaultReadWriteTimeout = TimeSpan.FromSeconds(300);
+        private static readonly TimeSpan maxTimeout = TimeSpan.FromSeconds(300);
 
         private static readonly AmazonS3Config BoltS3Config = new AmazonS3Config
         {
             ForcePathStyle = true,
+            // Explicitly set default timeout values
+            Timeout = defaultTimeout,
+            // NOTE: The following property is obsolete for
+            //       versions of the AWS SDK for .NET that target .NET Core.
+            ReadWriteTimeout = defaultReadWriteTimeout,
         };
 
         private static void UseBoltConfiguration()
@@ -240,10 +248,27 @@ namespace ProjectN.Bolt
         /// </code>
         ///
         /// </summary>
-        /// <param name="config">The AmazonS3Client Configuration Object</param>
-        public BoltS3Client(AmazonS3Config config) : base(config)
+        /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
+        public BoltS3Client(AmazonS3Config clientConfig) : base(clientConfig)
         {
-            config.ForcePathStyle = true;
+            clientConfig.ForcePathStyle = true;
+            // set timeouts to defaults if not set, or ensure they're not greater than maxTimeout
+            if (clientConfig.Timeout == null)
+            {
+                clientConfig.Timeout = defaultTimeout;
+            }
+            else if (clientConfig.Timeout > maxTimeout)
+            {
+                clientConfig.Timeout = maxTimeout;
+            }
+            if (clientConfig.ReadWriteTimeout == null)
+            {
+                clientConfig.ReadWriteTimeout = defaultReadWriteTimeout;
+            }
+            else if (clientConfig.ReadWriteTimeout > maxTimeout)
+            {
+                clientConfig.ReadWriteTimeout = maxTimeout;
+            }
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
@@ -268,6 +293,22 @@ namespace ProjectN.Bolt
         public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
+            if (clientConfig.Timeout == null)
+            {
+                clientConfig.Timeout = defaultTimeout;
+            }
+            else if (clientConfig.Timeout > maxTimeout)
+            {
+                clientConfig.Timeout = maxTimeout;
+            }
+            if (clientConfig.ReadWriteTimeout == null)
+            {
+                clientConfig.ReadWriteTimeout = defaultReadWriteTimeout;
+            }
+            else if (clientConfig.ReadWriteTimeout > maxTimeout)
+            {
+                clientConfig.ReadWriteTimeout = maxTimeout;
+            }
         }
 
         /// <summary>
@@ -302,6 +343,22 @@ namespace ProjectN.Bolt
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
+            if (clientConfig.Timeout == null)
+            {
+                clientConfig.Timeout = defaultTimeout;
+            }
+            else if (clientConfig.Timeout > maxTimeout)
+            {
+                clientConfig.Timeout = maxTimeout;
+            }
+            if (clientConfig.ReadWriteTimeout == null)
+            {
+                clientConfig.ReadWriteTimeout = defaultReadWriteTimeout;
+            }
+            else if (clientConfig.ReadWriteTimeout > maxTimeout)
+            {
+                clientConfig.ReadWriteTimeout = maxTimeout;
+            }
         }
 
         /// <summary>
@@ -339,6 +396,22 @@ namespace ProjectN.Bolt
             AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
+            if (clientConfig.Timeout == null)
+            {
+                clientConfig.Timeout = defaultTimeout;
+            }
+            else if (clientConfig.Timeout > maxTimeout)
+            {
+                clientConfig.Timeout = maxTimeout;
+            }
+            if (clientConfig.ReadWriteTimeout == null)
+            {
+                clientConfig.ReadWriteTimeout = defaultReadWriteTimeout;
+            }
+            else if (clientConfig.ReadWriteTimeout > maxTimeout)
+            {
+                clientConfig.ReadWriteTimeout = maxTimeout;
+            }
         }
 
         /// <summary>Creates the signer for the service.</summary>
