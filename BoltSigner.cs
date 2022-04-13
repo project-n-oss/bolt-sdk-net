@@ -34,6 +34,12 @@ namespace ProjectN.Bolt
         }
         private static readonly string prefix = InitializePrefix();
 
+        bool disableReadPassthrough = false;
+        public BoltSigner(bool disableReadPassthrough = false) : base()
+        {
+            this.disableReadPassthrough = disableReadPassthrough;
+        }
+
         /// <summary>
         /// Calculates and signs the specified request using the AWS4 signing protocol by using the
         /// AWS account credentials given in the method parameters. The resulting signature is added
@@ -91,7 +97,7 @@ namespace ProjectN.Bolt
             // Use bolt hostname as the Host in the request
             // SSL certs are validated based on the Host
             request.Headers["Host"] = BoltS3Client.BoltHostname;
-            if (BoltConfiguration.DisableReadPassthrough)
+            if (disableReadPassthrough)
             {
                 request.Headers["X-Bolt-Passthrough-Read"] = "disable";
             }

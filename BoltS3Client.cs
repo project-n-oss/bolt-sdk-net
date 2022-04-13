@@ -24,7 +24,6 @@ namespace ProjectN.Bolt
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id");
         public static string CustomDomain = Environment.GetEnvironmentVariable("BOLT_CUSTOM_DOMAIN");
         public static string AuthBucket = Environment.GetEnvironmentVariable("BOLT_AUTH_BUCKET");
-        public static bool DisableReadPassthrough = false;
     }
 
     /// <summary>
@@ -187,6 +186,8 @@ namespace ProjectN.Bolt
             QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={ZoneId}";
         }
 
+        public bool disableReadPassthrough { get; set; } = false;
+
         /// <summary>
         /// Constructs AmazonS3Client with the credentials loaded from the application's
         /// default configuration, and if unsuccessful from the Instance Profile service on an EC2 instance.
@@ -202,8 +203,9 @@ namespace ProjectN.Bolt
         /// </code>
         ///
         /// </summary>
-        public BoltS3Client() : base(BoltS3Config)
+        public BoltS3Client(bool disableReadPassthrough = false) : base(BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -222,8 +224,9 @@ namespace ProjectN.Bolt
         ///
         /// </summary>
         /// <param name="region">The region to connect.</param>
-        public BoltS3Client(RegionEndpoint region) : base(BoltS3Config)
+        public BoltS3Client(RegionEndpoint region, bool disableReadPassthrough = false) : base(BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -242,22 +245,25 @@ namespace ProjectN.Bolt
         ///
         /// </summary>
         /// <param name="config">The AmazonS3Client Configuration Object</param>
-        public BoltS3Client(AmazonS3Config config) : base(config)
+        public BoltS3Client(AmazonS3Config config, bool disableReadPassthrough = false) : base(config)
         {
             config.ForcePathStyle = true;
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
         /// <param name="credentials">AWS Credentials</param>
-        public BoltS3Client(AWSCredentials credentials) : base(credentials, BoltS3Config)
+        public BoltS3Client(AWSCredentials credentials, bool disableReadPassthrough = false) : base(credentials, BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>Constructs AmazonS3Client with AWS Credentials</summary>
         /// <param name="credentials">AWS Credentials</param>
         /// <param name="region">The region to connect.</param>
-        public BoltS3Client(AWSCredentials credentials, RegionEndpoint region) : base(credentials, BoltS3Config)
+        public BoltS3Client(AWSCredentials credentials, RegionEndpoint region, bool disableReadPassthrough = false) : base(credentials, BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -266,9 +272,10 @@ namespace ProjectN.Bolt
         /// </summary>
         /// <param name="credentials">AWS Credentials</param>
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
-        public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig) : base(credentials, clientConfig)
+        public BoltS3Client(AWSCredentials credentials, AmazonS3Config clientConfig, bool disableReadPassthrough = false) : base(credentials, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -276,9 +283,10 @@ namespace ProjectN.Bolt
         /// </summary>
         /// <param name="awsAccessKeyId">AWS Access Key ID</param>
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
-        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey) : base(awsAccessKeyId, awsSecretAccessKey,
+        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, bool disableReadPassthrough = false) : base(awsAccessKeyId, awsSecretAccessKey,
             BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -287,9 +295,10 @@ namespace ProjectN.Bolt
         /// <param name="awsAccessKeyId">AWS Access Key ID</param>
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
         /// <param name="region">The region to connect.</param>
-        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, RegionEndpoint region) : base(
+        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, RegionEndpoint region, bool disableReadPassthrough = false) : base(
             awsAccessKeyId, awsSecretAccessKey, BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -299,10 +308,12 @@ namespace ProjectN.Bolt
         /// <param name="awsAccessKeyId">AWS Access Key ID</param>
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
-        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig) : base(
+        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, AmazonS3Config clientConfig, bool disableReadPassthrough = false) : base(
             awsAccessKeyId, awsSecretAccessKey, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
+            this.disableReadPassthrough = disableReadPassthrough;
+
         }
 
         /// <summary>
@@ -311,9 +322,10 @@ namespace ProjectN.Bolt
         /// <param name="awsAccessKeyId">AWS Access Key ID</param>
         /// <param name="awsSecretAccessKey">AWS Secret Access Key</param>
         /// <param name="awsSessionToken">AWS Session Token</param>
-        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken) : base(
+        public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken, bool disableReadPassthrough = false) : base(
             awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -324,8 +336,9 @@ namespace ProjectN.Bolt
         /// <param name="awsSessionToken">AWS Session Token</param>
         /// <param name="region">The region to connect.</param>
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
-            RegionEndpoint region) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltS3Config)
+            RegionEndpoint region, bool disableReadPassthrough = false) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, BoltS3Config)
         {
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>
@@ -337,15 +350,16 @@ namespace ProjectN.Bolt
         /// <param name="awsSessionToken">AWS Session Token</param>
         /// <param name="clientConfig">The AmazonS3Client Configuration Object</param>
         public BoltS3Client(string awsAccessKeyId, string awsSecretAccessKey, string awsSessionToken,
-            AmazonS3Config clientConfig) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
+            AmazonS3Config clientConfig, bool disableReadPassthrough = false) : base(awsAccessKeyId, awsSecretAccessKey, awsSessionToken, clientConfig)
         {
             clientConfig.ForcePathStyle = true;
+            this.disableReadPassthrough = disableReadPassthrough;
         }
 
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
         {
-            return new BoltSigner();
+            return new BoltSigner(disableReadPassthrough);
         }
         /// <summary>
         /// Adds custom retry handler to client to refresh bolt endpoints on error
