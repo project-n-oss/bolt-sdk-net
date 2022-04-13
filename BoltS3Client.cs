@@ -24,6 +24,7 @@ namespace ProjectN.Bolt
                     ?? EC2InstanceMetadata.GetData("/placement/availability-zone-id");
         public static string CustomDomain = Environment.GetEnvironmentVariable("BOLT_CUSTOM_DOMAIN");
         public static string AuthBucket = Environment.GetEnvironmentVariable("BOLT_AUTH_BUCKET");
+        public static bool DisableReadPassthrough = false;
     }
 
     /// <summary>

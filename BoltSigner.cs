@@ -3,7 +3,8 @@ using System.Text;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal;
 using Amazon.Runtime.Internal.Auth;
-using Amazon.Runtime.Internal.Util;using Amazon.S3.Model;
+using Amazon.Runtime.Internal.Util;
+using Amazon.S3.Model;
 using Amazon.S3.Model.Internal.MarshallTransformations;
 using System.Collections.Generic;
 
@@ -69,7 +70,7 @@ namespace ProjectN.Bolt
                 S3Endpoint = new Uri($"https://s3.{BoltS3Client.Region}.amazonaws.com");
 
             // Create a S3 head request of the request path to the auth bucket.
-            var headRequest = GetObjectMetadataRequestMarshaller.Instance.Marshall(PrepareHeadRequest(request)); 
+            var headRequest = GetObjectMetadataRequestMarshaller.Instance.Marshall(PrepareHeadRequest(request));
             headRequest.Headers["User-Agent"] = request.Headers["User-Agent"];
             headRequest.Endpoint = S3Endpoint;
             if (request.Headers.TryGetValue("X-Amz-Security-Token", out var sessionToken))
@@ -90,6 +91,10 @@ namespace ProjectN.Bolt
             // Use bolt hostname as the Host in the request
             // SSL certs are validated based on the Host
             request.Headers["Host"] = BoltS3Client.BoltHostname;
+            if (BoltConfiguration.DisableReadPassthrough)
+            {
+                request.Headers["X-Bolt-Passthrough-Read"] = "disable";
+            }
         }
 
         private static GetObjectMetadataRequest PrepareHeadRequest(IRequest req)
@@ -100,7 +105,8 @@ namespace ProjectN.Bolt
             // 3. append dummy auth object - currently always 'auth`, but may change to accommodate separate read/write permissions in a future version
             var deconstructedPath = req.ResourcePath.Split('/');
             var sourceBucket = deconstructedPath.Length > 1 ? deconstructedPath[1] : "";
-            if (BoltS3Client.AuthBucket != null) {
+            if (BoltS3Client.AuthBucket != null)
+            {
                 // use auth bucket resolution
                 return new GetObjectMetadataRequest { BucketName = BoltS3Client.AuthBucket, Key = $"{prefix}{sourceBucket}/auth" };
             }
@@ -144,7 +150,7 @@ namespace ProjectN.Bolt
                                              string awsSecretAccessKey)
         {
             var signedAt = InitializeRoundedHeaders(request.Headers, request.Endpoint);
-            var service = "s3" ; // we always sign requests for s3, and the equivalent code from the base class uses an internal method to determine the service
+            var service = "s3"; // we always sign requests for s3, and the equivalent code from the base class uses an internal method to determine the service
 
             // the rest of the code should be identical to the implementation in the base class
             var region = DetermineSigningRegion(clientConfig, service, request.AlternateEndpoint, request);
