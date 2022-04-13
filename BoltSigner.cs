@@ -34,10 +34,10 @@ namespace ProjectN.Bolt
         }
         private static readonly string prefix = InitializePrefix();
 
-        bool disableReadPassthrough = false;
-        public BoltSigner(bool disableReadPassthrough = false) : base()
+        BoltS3Client boltS3Client;
+        public BoltSigner(BoltS3Client boltS3Client) : base()
         {
-            this.disableReadPassthrough = disableReadPassthrough;
+            this.boltS3Client = boltS3Client;
         }
 
         /// <summary>
@@ -97,9 +97,10 @@ namespace ProjectN.Bolt
             // Use bolt hostname as the Host in the request
             // SSL certs are validated based on the Host
             request.Headers["Host"] = BoltS3Client.BoltHostname;
-            if (disableReadPassthrough)
+
+            if (boltS3Client.disableReadPassthrough)
             {
-                request.Headers["X-Bolt-Passthrough-Read"] = "disable";
+                request.Headers.Add("X-Bolt-Passthrough-Read", "disable");
             }
         }
 

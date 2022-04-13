@@ -359,7 +359,7 @@ namespace ProjectN.Bolt
         /// <summary>Creates the signer for the service.</summary>
         protected override AbstractAWSSigner CreateSigner()
         {
-            return new BoltSigner(disableReadPassthrough);
+            return new BoltSigner(this);
         }
         /// <summary>
         /// Adds custom retry handler to client to refresh bolt endpoints on error
