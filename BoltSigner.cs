@@ -100,14 +100,7 @@ namespace ProjectN.Bolt
 
             if (boltS3Client.disableReadPassthrough)
             {
-                if (!request.Headers.ContainsKey("X-Bolt-Passthrough-Read"))
-                {
-                    request.Headers.Add("X-Bolt-Passthrough-Read", "disable");
-                }
-                else
-                {
-                    request.Headers["X-Bolt-Passthrough-Read"] = "disable";
-                }
+                request.Headers["X-Bolt-Passthrough-Read"] = "disable";
             }
         }
 
