@@ -41,7 +41,18 @@ namespace ProjectN.Bolt
             var httpException = exception as HttpRequestException;
             if (httpException != null)
             {
-                var socketException = httpException.InnerException as SocketException;
+                // SocketEception may be nested multiple levels down
+                var innerException = httpException.InnerException;
+                SocketException socketException = null;
+                while (innerException != null)
+                {
+                    socketException = innerException as SocketException;
+                    if (socketException != null)
+                        break;
+
+                    innerException = innerException.InnerException;
+                };
+
                 if (socketException != null)
                 {
                     switch (socketException.SocketErrorCode)
