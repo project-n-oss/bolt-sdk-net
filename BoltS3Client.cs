@@ -176,14 +176,15 @@ namespace ProjectN.Bolt
         {
             Region = BoltConfiguration.Region ?? throw new InvalidOperationException("AWS_REGION is not defined through BoltConfiguration or in evironment. And also Region info not available in EC2InstanceMetadata.");
 
-            ZoneId = BoltConfiguration.ZoneId ?? throw new InvalidOperationException("AWS_ZONE_ID not defined through BoltConfiguration or in evironment. And also AvailabilityZoneId info not available in EC2InstanceMetadata.");
+            ZoneId = BoltConfiguration.ZoneId ?? "";
 
             CustomDomain = BoltConfiguration.CustomDomain ?? throw new InvalidOperationException("BOLT_CUSTOM_DOMAIN not defined through BoltConfiguration or in evironment.");
 
             AuthBucket = BoltConfiguration.AuthBucket; // allow this to be unset - will use source bucket resolution if not provided
 
             BoltHostname = $"bolt.{Region}.{CustomDomain}";
-            QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt?az={ZoneId}";
+            
+            QuicksilverUrl = $"https://quicksilver.{Region}.{CustomDomain}/services/bolt{(!string.IsNullOrEmpty(ZoneId) ? "?az=" + ZoneId : "")}";
         }
 
         public bool disableReadPassthrough { get; set; } = false;
